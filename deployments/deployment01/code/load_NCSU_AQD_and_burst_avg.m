@@ -130,19 +130,25 @@ else
 end
 a2 = load(strcat(fileName,'.a2'));
 a3 = load(strcat(fileName,'.a3'));
+A.a1 = a1;
+A.a2 = a2;
+A.a3 = a3;
 %
 v1 = load(strcat(fileName,'.v1'));
 v2 = load(strcat(fileName,'.v2'));
 v3 = load(strcat(fileName,'.v3'));
+A.v1 = v1;
+A.v2 = v2;
+A.v3 = v3;
 %
 if exist(strcat(fileName,'.c1'),'file')
 corrFlag = 1;    
 c1 = load(strcat(fileName,'.c1'));
 c2 = load(strcat(fileName,'.c2'));
 c3 = load(strcat(fileName,'.c3'));
-% $$$ A.c1 = c1(:,bin1:end);
-% $$$ A.c2 = c2(:,bin1:end);
-% $$$ A.c3 = c3(:,bin1:end);
+A.c1 = c1;
+A.c2 = c2;
+A.c3 = c3;
 else
     corrFlag = 0;
 end
@@ -156,24 +162,28 @@ end
 % need to burst average the time/volt/seconds/sspeed/heading/pitch/roll/pressure/temperature/a#/v#
 burstNumber = unique(a1(:,1));
 for kk = 1:length(fieldNames)
+
     for jj = 1:length(burstNumber)
         burst = burstNumber(jj);
         inds  = find(a1(:,1)==burst);
         eval(['A.',fieldNames{kk},'(burst,:) = mean(A.',fieldNames{kk},'(inds,:),1);' ])
     end
-    if ismember(fieldNames{ii},{'a1','a2','a3','c1','c2','c3','v1','v2','v3'})
-        eval(['A.',fieldNames{kk},'(burstNumber(end)+1:end,bin1:end) = [];' ])
+    if ismember(fieldNames{kk},{'a1','a2','a3','c1','c2','c3','v1','v2','v3'})
+        eval(['A.',fieldNames{kk},' = ','A.',fieldNames{kk},'(1:burstNumber(end),bin1:end);'])
     else
         eval(['A.',fieldNames{kk},'(burstNumber(end)+1:end,:) = [];' ])
     end
 end
 %
+% correct the number of samples field
+nsamples   = length(A.time);
+A.Nsamples = nsamples;
 %
 switch coords
   case {'XYZ','ENU'}
-    A.v1 = v1(:,bin1:end);
-    A.v2 = v2(:,bin1:end);
-    A.v3 = v3(:,bin1:end);
+% $$$     A.v1 = v1(:,bin1:end);
+% $$$     A.v2 = v2(:,bin1:end);
+% $$$     A.v3 = v3(:,bin1:end);
     A.east = A.v1;
     A.north= A.v2;
     A.up   = A.v3;
@@ -205,9 +215,9 @@ switch coords
     A.b2  = reshape(BEAM(2,:)',shape);
     A.b3  = reshape(BEAM(3,:)',shape);
   case {'BEA'}
-    b1 = v1(:,bin1:end);
-    b2 = v2(:,bin1:end);
-    b3 = v3(:,bin1:end);
+    b1 = A.v1;
+    b2 = A.v2;
+    b3 = A.v3;
     shape = size(b1);
     XYZ= T*[b1(:)'; b2(:)'; b3(:)'];
     A.v1 = reshape(XYZ(1,:)',shape);
@@ -220,9 +230,9 @@ end
 %
 if ~strcmp(coords,'ENU')
     % rotate to EW, need to work out the pitch/roll matrices
-    hh = reshape(pi*(heading-90)/180,1,1,nsamples);
-    pp = reshape(pi*pitch/180,1,1,nsamples);
-    rr = reshape(pi*roll/180,1,1,nsamples);
+    hh = reshape(pi*(A.heading-90)/180,1,1,nsamples);
+    pp = reshape(pi*A.pitch/180,1,1,nsamples);
+    rr = reshape(pi*A.roll/180,1,1,nsamples);
     H = [ cos(hh) sin(hh) 0*hh;...
          -sin(hh) cos(hh) 0*hh;...
           0*hh      0*hh  0*hh+1];
