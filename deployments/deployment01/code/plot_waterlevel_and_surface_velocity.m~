@@ -1,0 +1,14 @@
+clear all
+close all
+% Enter input /directory/ and fileName root without file extension
+inputDir  = '/Users/derekgrimes/OneDriveUNCW/Data/CB_YachtBasin/MarshMadness/AQD5459/';
+inputFile = 'CB_N101';
+fileName  = [inputDir,filesep,inputFile];
+% Enter raw output /directory/ and fileName without .mat
+outputDir = inputDir;
+outputName= [inputFile,'_raw'];
+% Enter processed output fileName without .mat
+L0Dir   = inputDir;
+L0Name  = [inputFile,'_L0'];
+figDir  = [inputDir,filesep,'figures',filesep];
+adcp    = load([L0Dir,filesep,L0Name,'.mat']);

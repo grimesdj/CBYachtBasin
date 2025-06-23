@@ -1,0 +1,9 @@
+proj = projcrs(32119);%(2264)
+
+Northing = [3.348013000000000e+04, 3.460218233333333e+04];
+Easting  = [7.122062629999999e+05, 7.121378996666666e+05];
+
+[Latitude,Longitude] = projinv(proj,Easting,Northing);
+
+figure, geoplot(Latitude,Longitude,'*r')
+geobasemap('satellite')
