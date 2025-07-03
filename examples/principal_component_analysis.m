@@ -25,7 +25,7 @@ sig2neg = 0.5*( (u2avg + v2avg) - sqrt( (u2avg-v2avg)^2 + 4*uvavg^2 ));
 % eigen vectors
 %     [ v_positive  , v_negative    ];
 V   = [ uvavg          ,  sig2neg-v2avg;...
-        (sig2pos-u2avg),          uvavg];
+        (sig2pos-u2avg),  uvavg];
 %
 % normalized eigen vectors
 norm = diag(V'*V);
