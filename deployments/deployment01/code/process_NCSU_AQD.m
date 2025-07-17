@@ -38,6 +38,7 @@ else
     l = find(A.time>=atmTime(1) & A.time<=atmTime(2));
 end
 A.pressureOffset = mean(pressure(l(1):l(2)));
+A.pressure       = A.pressure - A.pressureOffset;
 %
 if ~exist('depTime','var')
     % now trim the data to when it was in the water
@@ -61,7 +62,7 @@ for jj = 1:length(vars)
 end
 nsamples = length(valid);
 %
-A.maxRange = (A.pressure-A.pressureOffset).*cosd(20)-1*binsize;
+A.maxRange = A.pressure.*cosd(20)-1*binsize;
 ylims      = [0 max(min(max(A.maxRange),max(A.dbins)),1)];
 dum1       = A.maxRange.*ones(1,nbins);
 dum2       = ones(nsamples,1)*A.dbins;
@@ -74,34 +75,34 @@ end
 %
 time = datetime(A.time,'convertFrom','datenum');
 %
-% use acceleration and jolt to filter bad data
-u1   = A.b1;
-d1   = gradientDG(u1)/dt;
-dd1  = gradientDG(d1)/dt;
-u2   = A.b2;
-d2   = gradientDG(u2)/dt;
-dd2  = gradientDG(d2)/dt;
-u3   = A.b3;
-d3   = gradientDG(u3)/dt;
-dd3  = gradientDG(d3)/dt;
-%
-r01  =  nanstd(u1(:));
-r02  =  nanstd(u2(:));
-r03  =  nanstd(u3(:));
-R0   = (u1./r01).^2 + (u2./r02).^2 + (u3./r03).^2;
-%
-r11  = nanstd(d1(:));
-r12  = nanstd(d2(:));
-r13  = nanstd(d3(:));
-R1   = (d1./r11).^2 + (d2./r12).^2 + (d3./r13).^2;
-%
-r21  = nanstd(dd1(:));
-r22  = nanstd(dd2(:));
-r23  = nanstd(dd3(:));
-R2   = (dd1./r21).^2 + (dd2./r22).^2 + (dd3./r23).^2;
-%
-valid = (R0<15);% & (R1<5) & (R2<10);
-A.qcFlag = A.qcFlag & valid;
+% $$$ % use acceleration and jolt to filter bad data
+% $$$ u1   = A.b1;
+% $$$ d1   = gradientDG(u1)/dt;
+% $$$ dd1  = gradientDG(d1)/dt;
+% $$$ u2   = A.b2;
+% $$$ d2   = gradientDG(u2)/dt;
+% $$$ dd2  = gradientDG(d2)/dt;
+% $$$ u3   = A.b3;
+% $$$ d3   = gradientDG(u3)/dt;
+% $$$ dd3  = gradientDG(d3)/dt;
+% $$$ %
+% $$$ r01  =  nanstd(u1(:));
+% $$$ r02  =  nanstd(u2(:));
+% $$$ r03  =  nanstd(u3(:));
+% $$$ R0   = (u1./r01).^2 + (u2./r02).^2 + (u3./r03).^2;
+% $$$ %
+% $$$ r11  = nanstd(d1(:));
+% $$$ r12  = nanstd(d2(:));
+% $$$ r13  = nanstd(d3(:));
+% $$$ R1   = (d1./r11).^2 + (d2./r12).^2 + (d3./r13).^2;
+% $$$ %
+% $$$ r21  = nanstd(dd1(:));
+% $$$ r22  = nanstd(dd2(:));
+% $$$ r23  = nanstd(dd3(:));
+% $$$ R2   = (dd1./r21).^2 + (dd2./r22).^2 + (dd3./r23).^2;
+% $$$ %
+% $$$ valid = (R0<15);% & (R1<5) & (R2<10);
+% $$$ A.qcFlag = A.qcFlag & valid;
 %
 % make a few quick plots
 fig0 = figure;
@@ -130,7 +131,7 @@ exportgraphics(fig0,figName)
 %
 % quick convolution running mean filter
 np1 = round(0.3/A.config.binSize);% 10 cm vertical 
-np2 = 31;% 5min for 1Hz data
+np2 = round(31*60/A.config.dt);% 30min 
 f1 = hamming(np1);f1 = f1./sum(f1);
 f2 = hamming(np2);f2 = f2./sum(f2);
 % do a nan-mean filter, keep track of normalization
@@ -243,11 +244,11 @@ fig4 = figure;
 pos  = get(fig4,'position');
 pos(3:4) = pos(3:4).*[0.5, 1];
 set(fig4, 'position',pos)
-plot(Uz,A.dbins,'.-k','linewidth',2)
+plot(Uz,A.dbins,'.-k',Vz,A.dbins,'--k','linewidth',2)
 set(hh,'fontsize',9)
-xlabel('Avg. East Velocity [m/s]','interpreter','latex')
+xlabel('Avg. Velocity [m/s]','interpreter','latex')
 ylabel('meters-above-bottom','interpreter','latex')
-set(gca,'ticklabelinterpreter','latex','tickdir','out','ylim',[0 1.5],'xlim',[0 1])
+set(gca,'ticklabelinterpreter','latex','tickdir','out','ylim',[0 max(A.pressure)],'xlim',[min(-0.25,min(Uz)) max(0.25,max(Uz))])
 figName = [figDir,'/',inputFile,'_mean_alongshore_velocity.png'];
 exportgraphics(fig4,figName)
 %
