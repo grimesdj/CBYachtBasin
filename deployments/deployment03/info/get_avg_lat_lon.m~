@@ -1,0 +1,5 @@
+lat_lon = [34.05673145,-77.88949171; 34.05673017,-77.88949732];
+lat_lon = mean(lat_lon,1)
+HHMM = rem(lat_lon,1)
+MM = HHMM*60
+SS = rem(HHMM*60,1)*60
