@@ -62,7 +62,7 @@ for jj = 1:length(vars)
 end
 nsamples = length(valid);
 %
-A.maxRange = A.pressure.*cosd(20)-1*binsize;
+A.maxRange = A.pressure.*cosd(20)-3*binsize;
 ylims      = [0 max(min(max(A.maxRange),max(A.dbins)),1)];
 dum1       = A.maxRange.*ones(1,nbins);
 dum2       = ones(nsamples,1)*A.dbins;
