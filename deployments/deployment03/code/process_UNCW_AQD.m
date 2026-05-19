@@ -18,7 +18,7 @@ L0Dir   = inputDir;
 L0Name  = [inputFile,'_L0'];
 % Enter time when instrument was in air for pressure offset
 atmTime = [datenum('10/03/2025 11:00:00'), datenum('10/03/2025 13:00:00')];
-depTime = [datenum('10/03/2025 14:50:00'), datenum('10/15/2025 10:40:00')];
+depTime = [datenum('10/03/2025 15:40:00'), datenum('10/15/2025 10:40:00')];
 % Enter path to save figures
 figDir = [inputDir,filesep,'figures',filesep];
 if ~exist(figDir,'dir'), eval(['!mkdir -p ',figDir]), end

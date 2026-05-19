@@ -1,0 +1,35 @@
+# Description of Drifter Design:
+
+## Version 0:
+- 12" length of 2.5" Schedule 40 (body),
+- Schedule 80 slip x pipe-thread coupling
+- Schedule 80 plug
+- 12" length of 3/4" Schedule 80 (antennae)
+- Ben to fill out remaining info...
+
+## Version 1: Piston plug for sensor/antenae assembly (https://www.sealseastern.com/OringPistonSeal.asp)
+- 2.5" ID:    2.455"--2.475"    ~ 2.465 +/- 0.011 
+- Metric:     6.236cm--6.287cm	~ 6.262 +/- 0.026
+- 3mm o-ring: 	     grove-depth ~ 2.25 mm 	    ID ~ 5.85cm
+- 3.5mm o-ring:      grove-depth ~ 3.07 mm	    ID ~ 5.67cm
+- 5mm o-ring: 	     grove-depth ~ 4.00 mm (80%)    ID ~ 5.33cm
+
+
+Nominal ID:
+- 2.47"--2.475" -> 62.75mm--62.87mm
+
+Plug Diameter (smaller by 0.01" ~ 0.25 mm):
+2.46" ~ 62.5mm
+
+Oring Thickness: 0.138" -> 3.5mm
+groove_depth = 2.45mm
+grove_width  = 1.03*oring_thickness
+
+First Print:
+John's printer: plug diameter = 2.445" ~ 62.103 mm
+CMS's printer: 	plug diameter = 2.454" ~ 62.332 mm
+
+## Threaded insert for set-screw:
+
+1) Heat-Set: https://www.mcmaster.com/products/threaded-inserts/for-use-in~plastic-1/heat-set-threaded-inserts-for-plastic~~/
+2) Twist-Resistant Press-In: https://www.mcmaster.com/92398A125/

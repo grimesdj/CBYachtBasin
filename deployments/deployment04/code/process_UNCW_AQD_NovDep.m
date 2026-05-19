@@ -1,7 +1,7 @@
 clear all
 close all
 % Enter input /directory/ and fileName root without file extension
-rootDir    = '/Users/derekgrimes/OneDriveUNCW/Data/CB_YachtBasin/NovDep/';
+rootDir    = '/Users/derekgrimes/OneDriveUNCW/Data/CB_YachtBasin/NovDep/AQD5459/';
 inputDirs  = {'./','./'};
 inputFiles = {'CB_N401','CB_N401'};
 outputNames= {'CB_N401_01','CB_N401_02'};
@@ -16,7 +16,7 @@ outputDir = inputDir;
 outputName= [outputNames{jj},'_raw'];
 % Enter processed output fileName without .mat
 L0Dir   = inputDir;
-L0Name  = [inputFile,'_L0'];
+L0Name  = [outputNames{jj},'_L0'];
 % Enter time when instrument was in air for pressure offset
 if jj==1
     atmTime = [datenum('11/03/2025 11:00:00'), datenum('11/03/2025 14:40:00')];
