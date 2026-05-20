@@ -40,15 +40,15 @@ set(ax1,'fontsize',15,'tickdir','out','ticklabelinterpreter','latex','box','off'
 title( sprintf('$\\tau=%2.2f~[h]$',time_lag),'interpreter','latex')
 pos1 = get(ax1,'position');
 pos1(3) = 0.95*pos1(3)
-set(ax1,'position',pos1)
+set(ax1,'position',pos1,'plotboxaspectratio',[1 0.5 1],'ylim',[-0.75 0.75])
 %
 ax2 = axes;
 plot(datetime(adcp.time,'convertfrom','datenum'),adcp.VelNorth(inds),'-r','linewidth',2)
 hold on,
-plot(datetime(adcp.time+time_lag/24,'convertfrom','datenum'),adcp.VelNorth(inds),'--g','linewidth',1.5)
+%plot(datetime(adcp.time+time_lag/24,'convertfrom','datenum'),adcp.VelNorth(inds),'--g','linewidth',1.5)
 ylabel('$v$ [m/s]','interpreter','latex')
 set(ax2,'fontsize',16,'tickdir','out','ticklabelinterpreter','latex','yaxislocation','right','color','none','ycolor','r','box','off','xtick',[])
-set(ax2,'position',pos1);
+set(ax2,'position',pos1,'plotboxaspectratio',[1 0.5 1]);
 linkaxes([ax1, ax2],'x')
 time = datetime(adcp.time,'convertfrom','datenum');
 set(ax2,'xlim',mean(time) + hours([-24 24]))

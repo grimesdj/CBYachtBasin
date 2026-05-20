@@ -88,13 +88,13 @@ ylabel('$R_{1,2}$ [n/a]','interpreter','latex')
 %
 %
 figure(fig1)
-hold on,plot(time+seconds(time_lag),basinWaterLevel,'--g','linewidth',1.5)
-title(sprintf('$\\tau=%d$',abs(time_lag)))
-set(gca,'xlim',mean(time) + hours([-24 24]),'tickdir','out','ticklabelinterpreter','latex')
+hold on,
+% $$$ plot(time+seconds(time_lag),basinWaterLevel,'--g','linewidth',1.5)
+% $$$ title(sprintf('$\\tau=%d$',abs(time_lag)))
+ylabel('$\eta$ [m]','interpreter','latex')
+set(gca,'xlim',mean(time) + hours([-24 24]),'tickdir','out','ticklabelinterpreter','latex','plotboxaspectratio',[1 0.5 1])
 leg = legend('WB','CB','CB($t-\tau$)','AutoUpdate','off');
 set(leg,'interpreter','latex')
-figName = [figDir,filesep,'tide_phase_lag.png'];
-exportgraphics(fig1,figName)
 %
 %
 %
@@ -125,6 +125,10 @@ dt_min = dt*d_idx_min/60;
 % remove outliers
 dt_min(abs(dt_min)>120)=[];
 dt_low_tide = mean(dt_min)
+
+title(sprintf('$\\tau_\\mathrm{high}=%2.1f$~min., $\\tau_\\mathrm{low}=%2.1f$~min.',abs(dt_high_tide),abs(dt_low_tide)))
+figName = [figDir,filesep,'tide_phase_lag.png'];
+exportgraphics(fig1,figName)
 
 
 function [idx_max,idx_min,cnt_max,cnt_min] = min_max(y)

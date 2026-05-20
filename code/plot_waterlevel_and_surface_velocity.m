@@ -15,19 +15,17 @@ adcp    = load([L0Dir,filesep,L0Name,'.mat']);
 %
 %
 N = length(adcp.time);
-% $$$ % this finds the nearest bin to surface
-% $$$ rows    = repmat([1:length(adcp.dbins)]',1,N);
-% $$$ rows(isnan(adcp.VelNorth)) = 0;
-% $$$ inwater = max(rows,[],1);
-% $$$ inds    = sub2ind(size(adcp.VelNorth),inwater,1:N);
-velocityDepthAverage = mean(adcp.VelNorth,1,'omitnan');
+rows    = repmat([1:length(adcp.dbins)]',1,N);
+rows(isnan(adcp.VelNorth)) = 0;
+inwater = max(rows,[],1);
+inds    = sub2ind(size(adcp.VelNorth),inwater,1:N);
 %
 % 6 hour max lag
 dt = adcp.time(2)-adcp.time(1);
 basinWaterLevel = adcp.pressure-mean(adcp.pressure);
-s12 = std(velocityDepthAverage).*std(basinWaterLevel);
+s12 = std(adcp.VelNorth(inds)).*std(basinWaterLevel);
 maxLag = 600;
-[R12,lags] = xcorr(basinWaterLevel,velocityDepthAverage,maxLag);
+[R12,lags] = xcorr(basinWaterLevel,adcp.VelNorth(inds),maxLag);
 R12 = R12/(N-1)/s12;
 %
 %
@@ -42,19 +40,19 @@ set(ax1,'fontsize',15,'tickdir','out','ticklabelinterpreter','latex','box','off'
 title( sprintf('$\\tau=%2.2f~[h]$',time_lag),'interpreter','latex')
 pos1 = get(ax1,'position');
 pos1(3) = 0.95*pos1(3)
-set(ax1,'position',pos1)
+set(ax1,'position',pos1,'plotboxaspectratio',[1 0.5 1],'ylim',[-0.75 0.75])
 %
 ax2 = axes;
-plot(datetime(adcp.time,'convertfrom','datenum'),velocityDepthAverage,'-r','linewidth',2)
+plot(datetime(adcp.time,'convertfrom','datenum'),adcp.VelNorth(inds),'-r','linewidth',2)
 hold on,
-plot(datetime(adcp.time+time_lag/24,'convertfrom','datenum'),velocityDepthAverage,'--g','linewidth',1.5)
+%plot(datetime(adcp.time+time_lag/24,'convertfrom','datenum'),adcp.VelNorth(inds),'--g','linewidth',1.5)
 ylabel('$v$ [m/s]','interpreter','latex')
 set(ax2,'fontsize',16,'tickdir','out','ticklabelinterpreter','latex','yaxislocation','right','color','none','ycolor','r','box','off','xtick',[])
-set(ax2,'position',pos1);
+set(ax2,'position',pos1,'plotboxaspectratio',[1 0.5 1]);
 linkaxes([ax1, ax2],'x')
 time = datetime(adcp.time,'convertfrom','datenum');
 set(ax2,'xlim',mean(time) + hours([-24 24]))
-figName = [figDir,filesep,'depth_averaged_velocity_lag.png'];
+figName = [figDir,filesep,'surface_velocity_lag.png'];
 exportgraphics(fig1,figName)
 % $$$ 
 % $$$ 
