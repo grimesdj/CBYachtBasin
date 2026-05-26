@@ -1,0 +1,8 @@
+function [depth_avg_lag, surf_avg_lag] = estimate_CBYachtBasin_WaterLevel_Velocity_PhaseLag(adcpFile)
+
+figDir  = './figures';
+adcp    = load(adcpFile);
+%
+
+end
+

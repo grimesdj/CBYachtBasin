@@ -1,17 +1,27 @@
-clear all
-close all
-% Enter input /directory/ and fileName root without file extension
-inputDir  = '/Users/derekgrimes/OneDriveUNCW/Data/CB_YachtBasin/MarshMadness/AQD5459/';
-inputFile = 'CB_N101';
-fileName  = [inputDir,filesep,inputFile];
-% Enter raw output /directory/ and fileName without .mat
-outputDir = inputDir;
-outputName= [inputFile,'_raw'];
-% Enter processed output fileName without .mat
-L0Dir   = inputDir;
-L0Name  = [inputFile,'_L0'];
-figDir  = [inputDir,filesep,'figures',filesep];
-adcp    = load([L0Dir,filesep,L0Name,'.mat']);
+function waterlevel_time_lags = estimate_WrightsvilleBeach_tide_phase_lag(adcpFile)
+%
+% USAGE: waterlevel_time_lags = estimate_WrightsvilleBeach_tide_phase_lag(adcpFile)
+%
+% estimate the phase lag between wrightsville beach and cb-yachtbasin adcp.
+% INPUT (example):
+% adcpFile = '/Users/derekgrimes/OneDriveUNCW/Data/CB_YachtBasin/MarshMadness/AQD5459/CB_N101_L0.mat'
+% OUTPUT:
+% waterlevel_time_lags = [peak cross-correlation, avg. high-tide lag, avg. low-tide lag];
+    
+% $$$ % Enter input /directory/ and fileName root without file extension
+% $$$ inputDir  = '/Users/derekgrimes/OneDriveUNCW/Data/CB_YachtBasin/MarshMadness/AQD5459/';
+% $$$ inputFile = 'CB_N101';
+% $$$ fileName  = [inputDir,filesep,inputFile];
+% $$$ % Enter raw output /directory/ and fileName without .mat
+% $$$ outputDir = inputDir;
+% $$$ outputName= [inputFile,'_raw'];
+% $$$ % Enter processed output fileName without .mat
+% $$$ L0Dir   = inputDir;
+% $$$ L0Name  = [inputFile,'_L0'];
+% $$$ figDir  = [inputDir,filesep,'figures',filesep];
+% $$$ adcpFile = [L0Dir,filesep,L0Name,'.mat'];
+figDir  = './figures';
+adcp    = load(adcpFile);
 %
 %
 % get time of first/last observation...
@@ -37,7 +47,7 @@ url = ['https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?begin_date=',s
 %
 % we'll look at two methods to read in the ascii formatted data. We'll time each using tic/toc.
 % create a filename to save the data on hard-drive:
-fileName = [inputDir,filesep,'water_levels_',gaugeID,'_',startDate,'_',endDate,'.csv'];
+fileName = ['/Users/derekgrimes/OneDriveUNCW/DATA/','water_levels_',gaugeID,'_',startDate,'_',endDate,'.csv'];
 websave(fileName,url);
 %
 %
@@ -55,6 +65,7 @@ waterSigma=waterSigma(idx);
 N         = length(time);
 dt        = seconds(time(2)-time(1));
 %
+eval(['!rm ',fileName])
 %
 % map to WL-time vector:
 basinWaterLevel = interp1(adcp.time, adcp.pressure-mean(adcp.pressure), datenum(time));
@@ -80,7 +91,7 @@ R12 = R12/(N-1)/s12;
 %
 %
 [maxR,lag] = max(R12);
-time_lag   = lags(lag)*dt
+time_lag   = lags(lag)*dt;
 %
 fig2 = figure; plot(lags*dt,R12)
 xlabel('$\Delta t$ [s]','interpreter','latex')
@@ -91,8 +102,13 @@ figure(fig1)
 hold on,
 % $$$ plot(time+seconds(time_lag),basinWaterLevel,'--g','linewidth',1.5)
 % $$$ title(sprintf('$\\tau=%d$',abs(time_lag)))
+if month(mean(time))==5
+    lims = [datetime('26-May-2025 00:00:00') datetime('28-May-2025 00:00:00')];
+else
+    lims = mean(time) + hours([-24 24]);
+end
 ylabel('$\eta$ [m]','interpreter','latex')
-set(gca,'xlim',mean(time) + hours([-24 24]),'tickdir','out','ticklabelinterpreter','latex','plotboxaspectratio',[1 0.5 1])
+set(gca,'xlim',lims,'tickdir','out','ticklabelinterpreter','latex','plotboxaspectratio',[1 0.5 1])
 leg = legend('WB','CB','CB($t-\tau$)','AutoUpdate','off');
 set(leg,'interpreter','latex')
 %
@@ -115,7 +131,7 @@ d_idx_max = -(idx_WB_max-idx_CB_max(idx_CB_to_WB));
 dt_max = dt*d_idx_max/60;
 % remove outliers
 dt_max(abs(dt_max)>120)=[];
-dt_high_tide = mean(dt_max)
+dt_high_tide = mean(dt_max);
 
 % get closest WB low tide to each low high-tide...
 dt_min = idx_WB_min'-idx_CB_min;
@@ -124,12 +140,14 @@ d_idx_min = -(idx_WB_min-idx_CB_min(idx_CB_to_WB));
 dt_min = dt*d_idx_min/60;
 % remove outliers
 dt_min(abs(dt_min)>120)=[];
-dt_low_tide = mean(dt_min)
+dt_low_tide = mean(dt_min);
 
 title(sprintf('$\\tau_\\mathrm{high}=%2.1f$~min., $\\tau_\\mathrm{low}=%2.1f$~min.',abs(dt_high_tide),abs(dt_low_tide)))
-figName = [figDir,filesep,'tide_phase_lag.png'];
+str = split(adcpFile,filesep);
+figName = [figDir,filesep,'tide_phase_lag_',str{end-2},'.png'];
 exportgraphics(fig1,figName)
 
+waterlevel_time_lags = [-time_lag/60, dt_high_tide, dt_low_tide];
 
 function [idx_max,idx_min,cnt_max,cnt_min] = min_max(y)
 N   = length(y);
@@ -149,4 +167,5 @@ for ii = 2:N-1;
     end
 end
 
+end
 end

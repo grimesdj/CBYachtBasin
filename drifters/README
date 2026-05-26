@@ -33,3 +33,10 @@ CMS's printer: 	plug diameter = 2.454" ~ 62.332 mm
 
 1) Heat-Set: https://www.mcmaster.com/products/threaded-inserts/for-use-in~plastic-1/heat-set-threaded-inserts-for-plastic~~/
 2) Twist-Resistant Press-In: https://www.mcmaster.com/92398A125/
+
+
+
+$$
+First print = 65g material (less than 100% fill)
+Second print = 250g material (100% fill)
+
