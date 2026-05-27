@@ -80,10 +80,10 @@ dum1       = A.maxRange.*ones(1,nbins);
 dum2       = ones(nsamples,1)*A.dbins;
 qcFlag0    =  (dum2<=dum1);
 if corrFlag
-    A.qcFlag   =  double( (dum2<=dum1) & min(A.a1,min(A.a2,A.a3))>30 & min(A.c1,min(A.c2,A.c3))>30 );
+    A.qcFlag   =  double( (dum2<=dum1) & min(A.a1,min(A.a2,A.a3))>20 & min(A.c1,min(A.c2,A.c3))>30 );
 else
     disp('lowering minimum amplitude to 20')
-    A.qcFlag   =  double( (dum2<=dum1) & min(A.a1,min(A.a2,A.a3))>20 );
+    A.qcFlag   =  double( (dum2<=dum1) & min(A.a1,min(A.a2,A.a3))>15 );
 end
 %
 time = datetime(A.time,'convertFrom','datenum');
@@ -156,19 +156,19 @@ A3 = conv2(f1,f2,(A.a3.*A.qcFlag)','same')./on;
 %
 fig1 = figure;
 ax1 = subplot(3,1,1);
-imagesc(time,A.dbins',A1.*qcFlag0'),caxis([100 180]),colormap(cmocean('thermal')),colorbar
+imagesc(time,A.dbins',A1.*qcFlag0'),caxis([20 180]),colormap(cmocean('thermal')),colorbar
 text(time(1),ylims(2),'X')
 set(ax1,'ydir','normal','ticklabelinterpreter','latex','ylim',ylims)
 title(ax1,'Amplitude')
 %
 ax2 = subplot(3,1,2);
-imagesc(time,A.dbins',A2.*qcFlag0'),caxis([100 180]),colormap(cmocean('thermal')),colorbar
+imagesc(time,A.dbins',A2.*qcFlag0'),caxis([20 180]),colormap(cmocean('thermal')),colorbar
 text(time(1),ylims(2),'Y')
 ylabel('mab','interpreter','latex')
 set(ax2,'ydir','normal','ticklabelinterpreter','latex','ylim',ylims)
 %
 ax3 = subplot(3,1,3);
-imagesc(time,A.dbins',A3.*qcFlag0'),caxis([100 180]),colormap(cmocean('thermal')),colorbar
+imagesc(time,A.dbins',A3.*qcFlag0'),caxis([20 180]),colormap(cmocean('thermal')),colorbar
 text(time(1),ylims(2),'Z')
 set(ax3,'ydir','normal','ticklabelinterpreter','latex','ylim',ylims)
 xlabel('time [s]','interpreter','latex')
