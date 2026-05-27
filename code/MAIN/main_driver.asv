@@ -1,0 +1,69 @@
+clear all; 
+close all;
+%% Main driver script
+
+% Wherever you have the post processing folder on your local machine
+root_data = 'C:\Users\bcm3620\OneDrive - UNC-Wilmington\'; %This is the path to the CB YACHT BASIN shared folder on your machine
+root_dir = 'C:\Users\bcm3620\OneDrive - UNC-Wilmington\THESIS\CBYachtBasin\'; % Path to the Post Processing folder on your machine
+
+
+
+%% Choose the observation period
+obsPeriod = 'MarshMayhem';
+% Options:
+% 'MarshMadness'
+% 'MarshMayhem'
+% 'FallFrolic 100825'
+% 'FallFrolic 101025'
+% 'NovDep'
+
+%% Choose North or South ADCP for analysis
+adcpLoc = 'NorthADCP';
+% Options:
+% 'NorthADCP'
+% 'SouthADCP'
+
+% Get all the necessary configuration for that observation period
+cfg = get_obs_config(obsPeriod, adcpLoc, root_dir, root_data);
+
+disp(cfg);
+
+addpath(genpath(fullfile(cfg.root_dir, 'FUNCTIONS')));
+
+%% Run North ADCP level 1
+
+inputDir = cfg.adcp_input_dir;
+inputFile = cfg.adcp_input_file;
+
+[adcp_level_1] = load_and_save_adcp(inputDir, inputFile, cfg);
+
+save(fullfile(cfg.out.adcp_data, [cfg.obsTag '_adcp_level_1.mat']), 'adcp_level_1');
+
+%% Run Drifter level 1
+dep_fin = readtable(cfg.drifters_dep_times);
+drifters_root_dir = cfg.drifters_raw_dir;
+
+[drifters_level_1] = drifter_post_processing(dep_fin,drifters_root_dir, cfg);
+
+save(fullfile(cfg.out.drifters_data, [cfg.obsTag '_drifters_level_1.mat']), 'drifters_level_1');
+
+%% Run ADCP level 2
+
+[adcp_level_2] = adcp_post_processing(adcp_level_1, cfg);
+
+save(fullfile(cfg.out.adcp_data, [cfg.obsTag '_adcp_level_2.mat']), 'adcp_level_2');
+
+%% Run Level 3: Drifter and ADCP comparison
+
+[ROI_ADCP, ROI_EXTRAP, ROI_EOF, COMP] = comparison(adcp_level_1, adcp_level_2, drifters_level_1, cfg);
+
+save(fullfile(cfg.out.comp_data, [cfg.obsTag '_ROI_ADCP.mat']), 'ROI_ADCP');
+save(fullfile(cfg.out.comp_data, [cfg.obsTag '_ROI_EXTRAP.mat']), 'ROI_EXTRAP');
+save(fullfile(cfg.out.comp_data, [cfg.obsTag '_ROI_EOF.mat']), 'ROI_EOF');
+save(fullfile(cfg.out.comp_data, [cfg.obsTag '_COMP.mat']), 'COMP');
+
+%% Run Level 4: Range of Instrument analysis
+
+ROI(adcp_level_2, ROI_ADCP, cfg)
+
+

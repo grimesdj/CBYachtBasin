@@ -1,4 +1,4 @@
-function ROI(adcp_level_2, ROI_ADCP)
+function ROI(adcp_level_2, ROI_ADCP, cfg)
 
 %% U and V predicted from the complex EOF
 U_pred_cmplx = real(adcp_level_2.EC_cmplx(:,1:3)*adcp_level_2.EOFs_cmplx(:,1:3)')+real(adcp_level_2.trend_cmplx);
@@ -71,10 +71,13 @@ for j = 1:size(ROI_ADCP,1);
         grid on
         
         
-        fname = sprintf('ROI_Profile_raw_j%02d_i%02d.png', j, i);
+        fname = sprintf('_ROI_Profile_raw_j%02d_i%02d.png', j, i);
         fname_1 = sprintf('ROI_Profile_raw_j%02d_i%02d.fig', j, i);
 %         exportgraphics(fig,fname, 'Resolution', 300);
 %         savefig(fig,fname_1);
+
+
+        exportgraphics(fig, fullfile(cfg.out.comp_figures, [cfg.obsTag fname]), 'Resolution', 300);
 
 
 

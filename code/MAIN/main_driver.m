@@ -4,7 +4,7 @@ close all;
 
 % Wherever you have the post processing folder on your local machine
 root_data = 'C:\Users\bcm3620\OneDrive - UNC-Wilmington\'; %This is the path to the CB YACHT BASIN shared folder on your machine
-root_dir = 'C:\Users\bcm3620\OneDrive - UNC-Wilmington\THESIS\'; % Path to the Post Processing folder on your machine
+root_dir = 'C:\Users\bcm3620\OneDrive - UNC-Wilmington\THESIS\CBYachtBasin\'; % Path to the Post Processing folder on your machine
 
 
 
@@ -18,7 +18,7 @@ obsPeriod = 'FallFrolic 101025';
 % 'NovDep'
 
 %% Choose North or South ADCP for analysis
-adcpLoc = 'SouthADCP';
+adcpLoc = 'NorthADCP';
 % Options:
 % 'NorthADCP'
 % 'SouthADCP'
@@ -49,13 +49,13 @@ save(fullfile(cfg.out.drifters_data, [cfg.obsTag '_drifters_level_1.mat']), 'dri
 
 %% Run ADCP level 2
 
-[adcp_level_2] = adcp_post_processing(adcp_level_1);
+[adcp_level_2] = adcp_post_processing(adcp_level_1, cfg);
 
 save(fullfile(cfg.out.adcp_data, [cfg.obsTag '_adcp_level_2.mat']), 'adcp_level_2');
 
 %% Run Level 3: Drifter and ADCP comparison
 
-[ROI_ADCP, ROI_EXTRAP, ROI_EOF, COMP] = comparison(adcp_level_1, adcp_level_2, drifters_level_1);
+[ROI_ADCP, ROI_EXTRAP, ROI_EOF, COMP] = comparison(adcp_level_1, adcp_level_2, drifters_level_1, cfg);
 
 save(fullfile(cfg.out.comp_data, [cfg.obsTag '_ROI_ADCP.mat']), 'ROI_ADCP');
 save(fullfile(cfg.out.comp_data, [cfg.obsTag '_ROI_EXTRAP.mat']), 'ROI_EXTRAP');
@@ -64,6 +64,6 @@ save(fullfile(cfg.out.comp_data, [cfg.obsTag '_COMP.mat']), 'COMP');
 
 %% Run Level 4: Range of Instrument analysis
 
-ROI(adcp_level_2, ROI_ADCP)
+ROI(adcp_level_2, ROI_ADCP, cfg)
 
 

@@ -1,4 +1,4 @@
-function [adcp_level_2] = adcp_post_processing(adcp_level_1);
+function [adcp_level_2] = adcp_post_processing(adcp_level_1, cfg);
 
 %% Extract data from structure
 
@@ -82,6 +82,8 @@ legend([p1(1) p2(1) p3(1)],'input data','rotated data','eigen vectors')
 xlabel(' rotated-major-axis ')
 ylabel(' rotated-minor-axis ')
 
+exportgraphics(fig1, fullfile(cfg.out.adcp_figures, [cfg.obsTag '_adcp_PCA.png']), 'Resolution', 300);
+
 %% Apply roation matrix to the depth varying currents from the ADCP
 [M,N] = size(east);
 
@@ -117,12 +119,12 @@ fig2 = figure
 ax1 = subplot(2,1,1);
 imagesc(time,dbins',V_1.*qcFlag','AlphaData',qcFlag'),caxis(uv_caxis),colormap(cmocean('balance')),colorbar
 % xlim([datenum(2025,10,10,08,00,0) datenum(2025,10,11)]);
-xlim([datenum(2025,11,07) datenum(2025,11,08)]);
+% xlim([datenum(2025,11,07) datenum(2025,11,08)]);
 hold on
-xline([datenum(2025,11,07,13,04,0)],'r','Linewidth',2);
-xline([datenum(2025,11,07,13,47,0)],'k','Linewidth',2);
-xline([datenum(2025,11,07,14,40,0)],'g','Linewidth',2);
-xline([datenum(2025,11,07,15,56,0)],'m','Linewidth',2);
+% xline([datenum(2025,11,07,13,04,0)],'r','Linewidth',2);
+% xline([datenum(2025,11,07,13,47,0)],'k','Linewidth',2);
+% xline([datenum(2025,11,07,14,40,0)],'g','Linewidth',2);
+% xline([datenum(2025,11,07,15,56,0)],'m','Linewidth',2);
 plot(time,pressure)
 % xline(t1,'r','LineWidth',1.5);
 % xline(t2,'k','LineWidth',1.5);
@@ -139,15 +141,15 @@ set(ax1,'XTickLabel',[])
 ax2 = subplot(2,1,2);
 imagesc(time,dbins',V_2.*qcFlag','AlphaData',qcFlag'),caxis(uv_caxis),colormap(cmocean('balance'))
 % xlim([datenum(2025,10,10,08,00,0) datenum(2025,10,11)]);
-xlim([datenum(2025,11,07) datenum(2025,11,08)]);
+% xlim([datenum(2025,11,07) datenum(2025,11,08)]);
 caxis([-0.3 0.3]);
 cb = colorbar;
 set(cb,'ytick',[-0.3:0.1:0.3])
 hold on
-xline([datenum(2025,11,07,13,04,0)],'r','Linewidth',2);
-xline([datenum(2025,11,07,13,47,0)],'k','Linewidth',2);
-xline([datenum(2025,11,07,14,40,0)],'g','Linewidth',2);
-xline([datenum(2025,11,07,15,56,0)],'m','Linewidth',2);
+% xline([datenum(2025,11,07,13,04,0)],'r','Linewidth',2);
+% xline([datenum(2025,11,07,13,47,0)],'k','Linewidth',2);
+% xline([datenum(2025,11,07,14,40,0)],'g','Linewidth',2);
+% xline([datenum(2025,11,07,15,56,0)],'m','Linewidth',2);
 plot(time,pressure)
 % xline(t1,'r','LineWidth',1.5);
 % xline(t2,'k','LineWidth',1.5);
@@ -168,6 +170,8 @@ ylabel('mab','interpreter','latex')
 
 % datetick(ax1,'x','mm/dd HH:MM','keeplimits','keepticks');
 datetick(ax2,'x','mm/dd HH:MM','keeplimits','keepticks');
+
+exportgraphics(fig2, fullfile(cfg.out.adcp_figures, [cfg.obsTag '_depth_varying_PCA.png']), 'Resolution', 300);
 
 
 % Now raw
@@ -201,6 +205,8 @@ title('North')
 set(ax2,'ydir','normal','ticklabelinterpreter','latex','ylim',ylims)
 set(h, 'AlphaData', ~isnan(V2));
 ylabel('mab','interpreter','latex')
+
+exportgraphics(fig3, fullfile(cfg.out.adcp_figures, [cfg.obsTag '_depth_varying_raw.png']), 'Resolution', 300);
 
 %% Extrapolation of u2 and v2 to surface and bottom
 
@@ -318,6 +324,7 @@ scaledEOFs = EOFs.*stdMode';
 fraction_of_variance = stdMode.^2./sum(stdMode.^2);
 fig4 = figure;
 plot(fraction_of_variance);
+exportgraphics(fig4, fullfile(cfg.out.adcp_figures, [cfg.obsTag '_frac_of_var.png']), 'Resolution', 300);
 
 % Save this stuff to the structure
 EOF.EC_cmplx = EC;
@@ -339,6 +346,8 @@ xlabel('Amplitude (m/s)');
 ylabel('z/h');
 legend('Time Averaged Velocity','Mode 1','Mode 2','Mode 3','location','best'); 
 
+exportgraphics(fig5, fullfile(cfg.out.adcp_figures, [cfg.obsTag '_3_modes_w_trend.png']), 'Resolution', 300);
+
 %Plot the modes and their trend seperately
 fig6 = figure;
 subplot(1,3,1)
@@ -353,10 +362,12 @@ subplot(1,3,3)
 plot(real(trend),zonh_grid,'k',imag(trend),zonh_grid,'--k',real(scaledEOFs(:,3)),zonh_grid,'r',imag(scaledEOFs(:,3)),zonh_grid,'--r')
 title('Mode 3')
 
-%Find the fraction of variance each mode is responsible for
-fraction_of_variance = stdMode.^2./sum(stdMode.^2);
-fig7 = figure;
-plot(fraction_of_variance);
+exportgraphics(fig6, fullfile(cfg.out.adcp_figures, [cfg.obsTag '_sep_modes.png']), 'Resolution', 300);
+
+% %Find the fraction of variance each mode is responsible for
+% fraction_of_variance = stdMode.^2./sum(stdMode.^2);
+% fig7 = figure;
+% plot(fraction_of_variance);
 
 %% U and V predicted from Complex EOF
 
@@ -381,6 +392,8 @@ title('U observed');
 subplot(3,1,3)
 imagesc(time,zonh_grid,real(d_complex)')
 
+exportgraphics(fig8, fullfile(cfg.out.adcp_figures, [cfg.obsTag '_U_pred_from_EOF.png']), 'Resolution', 300);
+
 fig9 = figure;
 subplot(2,1,1)
 imagesc(time,zonh_grid,V_pred_cmplx_EOF');
@@ -392,6 +405,8 @@ imagesc(time,zonh_grid,V_mapped)
 colormap(cmocean('balance'));
 caxis([-0.2 0.2])
 title('V observed');
+
+exportgraphics(fig9, fullfile(cfg.out.adcp_figures, [cfg.obsTag '_V_pred_from_EOF.png']), 'Resolution', 300);
 
 %% Residuals from complex EOF
 % *** USE D_COMPLEX ****
@@ -411,6 +426,8 @@ subplot(2,1,2)
 imagesc(time,zonh_grid,residuals_V');
 title('Residuals from EOF; V');
 caxis([-0.1 0.1]);
+
+exportgraphics(fig10, fullfile(cfg.out.adcp_figures, [cfg.obsTag '_EOF_residuals.png']), 'Resolution', 300);
 
 %%
 adcp_level_2 = EOF;

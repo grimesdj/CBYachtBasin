@@ -1,4 +1,4 @@
-function [ROI_ADCP, ROI_EXTRAP, ROI_EOF, COMP] = comp(adcp_level_1, adcp_level_2, drifters_level_1)
+function [ROI_ADCP, ROI_EXTRAP, ROI_EOF, COMP] = comp(adcp_level_1, adcp_level_2, drifters_level_1, cfg)
 
 proj = projcrs(32119);
 
@@ -315,8 +315,13 @@ for j = 1:numDeployments;
         %ROI_idxN = find(abs(d_N) <= 50);
         ROI_idx = dist<=thresh; %intersect(ROI_idxE, ROI_idxN);
         
+        noPointsCount = 0;
+        
         if ~any(ROI_idx)
             disp(['No points within threshold for j=', num2str(j), ', i=', num2str(i)]);
+            
+            noPointsCount = NoPointsCount + 1;
+            
             continue
 %         else
 %             keyboard;
@@ -466,6 +471,8 @@ xlabel('Drifter Velocities (m/s)');
 ylabel('ADCP Velocities (m/s)');
 title('ADCP OBSERVATIONS');
 
+exportgraphics(adcp, fullfile(cfg.out.comp_figures, ['_adcp_drifter_comp']), 'Resolution', 300);
+
 extrap = figure;
 scatter([ROI_ADCP(:,:).avg_V], [ROI_EXTRAP(:,:).V_topbin], 36, 'r', 'o', 'filled')
 hold on
@@ -482,6 +489,8 @@ xlabel('Drifter Velocities (m/s)');
 ylabel('ADCP Velocities (m/s)');
 title('EXTRAPOLATED OBSERVATIONS');
 
+exportgraphics(extrap, fullfile(cfg.out.comp_figures, ['_extrap_drifter_comp']), 'Resolution', 300);
+
 EOF = figure;
 scatter([ROI_ADCP(:,:).avg_V], [ROI_EOF(:,:).V_topbin], 36, 'r', 'o', 'filled')
 hold on
@@ -497,6 +506,8 @@ legend('V', 'u', 'v','1:1 line', 'Location', 'best')
 xlabel('Drifter Velocities (m/s)');
 ylabel('ADCP Velocities (m/s)');
 title('EOF');
+
+exportgraphics(EOF, fullfile(cfg.out.comp_figures, ['_eof_drifter_comp']), 'Resolution', 300);
 
 %% All together
 
@@ -515,4 +526,6 @@ legend('V', 'u', 'v','1:1 line', 'Location', 'best')
 xlabel('Drifter Velocities (m/s)');
 ylabel('ADCP Velocities (m/s)');
 title('All data');
+
+exportgraphics(All, fullfile(cfg.out.comp_figures, ['_all_drifter_comp']), 'Resolution', 300);
 end

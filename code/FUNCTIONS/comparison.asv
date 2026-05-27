@@ -1,0 +1,522 @@
+function [ROI_ADCP, ROI_EXTRAP, ROI_EOF, COMP] = comp(adcp_level_1, adcp_level_2, drifters_level_1, cfg)
+
+proj = projcrs(32119);
+
+%% Unrotate the extrapolated and EOF data
+[M,N] = size(adcp_level_2.u2_extrap);
+
+U_col_extrap = reshape(adcp_level_2.u2_extrap,[],1);
+V_col_extrap = reshape(adcp_level_2.v2_extrap,[],1);
+
+uv2_extrap = [U_col_extrap,V_col_extrap]*adcp_level_2.rot_mat';
+u2_extrap = uv2_extrap(:,1);
+v2_extrap = uv2_extrap(:,2);
+
+u2_extrap = reshape(u2_extrap,M,N);
+v2_extrap = reshape(v2_extrap,M,N);
+
+
+[M,N] = size(adcp_level_2.U_mapped);
+
+U_col_EOF = reshape(adcp_level_2.U_mapped,[],1);
+V_col_EOF = reshape(adcp_level_2.V_mapped,[],1);
+
+uv2_EOF = [U_col_EOF,V_col_EOF]*adcp_level_2.rot_mat';
+u2_EOF = uv2_EOF(:,1);
+v2_EOF = uv2_EOF(:,2);
+
+u2_EOF = reshape(u2_EOF,M,N);
+v2_EOF = reshape(v2_EOF,M,N);
+
+%% Extract ADCP data from structure
+
+V1 = adcp_level_1.V_E;
+V1_extrap = u2_extrap';
+V1_EOF = u2_EOF;
+% V_E = adcp_level_1.V_E;
+V2 = adcp_level_1.V_N;
+V2_extrap = v2_extrap';
+V2_EOF = v2_EOF;
+% V_N = adcp_level_1.V_N;
+adcp_bins = adcp_level_1.bins;
+eof_bins = adcp_level_2.dbins_extrap;
+% East_avg = adcp_level_1.East_avg;
+% North_avg = adcp_level_1.North_avg;
+pressure = adcp_level_1.pressure;
+% north = adcp_level_1.north;
+% east = adcp_level_1.east;
+% f1 = adcp_level_1.f1;
+% f2 = adcp_level_1.f2;
+time = adcp_level_1.time;
+qcFlag = adcp_level_1.qcFlag;
+
+qcFlag = qcFlag';
+
+%% Compare drifter velos within ROI to ADCP observations, extrapolated,and EOF data
+I_loc = [34.05673145	-77.88949171];
+[E_loc, N_loc] = projfwd(proj,I_loc(1),I_loc(2));
+
+
+[numDeployments, numDrifters] = size(drifters_level_1);
+
+
+ROI_ADCP = struct([]);
+
+for j = 1:numDeployments;
+    for i = 1:numDrifters
+        
+        Easting = drifters_level_1(j,i).East;
+        Northing = drifters_level_1(j,i).North;
+        Lat = drifters_level_1(j,i).Lat;
+        Lon = drifters_level_1(j,i).Lon;
+        v_e = drifters_level_1(j,i).v_e;
+        v_n = drifters_level_1(j,i).v_n;
+        V = drifters_level_1(j,i).V;
+        T = drifters_level_1(j,i).Date_and_time;
+        
+        T_datnum = datenum(T);
+        
+        d_E = Easting - E_loc;
+        d_N = Northing - N_loc;
+        dist = sqrt( d_E.^2 + d_N.^2);
+        thresh = 50; %meters
+        
+        %ROI_idxE = find(abs(d_E) <= 50);
+        %ROI_idxN = find(abs(d_N) <= 50);
+        ROI_idx = dist<=thresh; %intersect(ROI_idxE, ROI_idxN);
+        
+        if ~any(ROI_idx)
+            disp(['No points within threshold for j=', num2str(j), ', i=', num2str(i)]);
+            continue
+%         else
+%             keyboard;
+        end
+        
+        T_datnum = T_datnum(ROI_idx);
+        Easting = Easting(ROI_idx);
+        Northing = Northing(ROI_idx);
+        Lat = Lat(ROI_idx);
+        Lon = Lon(ROI_idx);
+        v_e = v_e(ROI_idx);
+        v_n = v_n(ROI_idx);
+        V = V(ROI_idx);
+        T = T(ROI_idx);
+        
+       
+        P = pressure;
+        V_E = V1;
+        V_N = V2;
+        time_adcp = time;
+        V_ADCP = sqrt(V_E.^2 + V_N.^2);
+        
+        dt = time_adcp - T_datnum(1);
+        [~,ind1] = min(abs(dt));
+        dt = time_adcp - T_datnum(end);
+        dt(ind1) = inf;
+        [~,ind2] = min(abs(dt));
+        
+        inds = min(ind1,ind2);
+        inde = max(ind1,ind2);
+        
+        V_E = V_E(:,inds:inde);
+        V_N = V_N(:,inds:inde);
+        V_ADCP = V_ADCP(:,inds:inde);
+%         valid_rows = ~isnan(V_ADCP(:,1));
+        valid_rows = ~isnan(V_ADCP(:,1)) & V_ADCP(:,1) ~= 0;
+        last_valid_idx = find(valid_rows, 1, 'last');
+        %last_valid_idx = 25;
+        V_topbin = mean(V_ADCP(last_valid_idx,:));
+        VE_topbin = mean(V_E(last_valid_idx,:));
+        VN_topbin = mean(V_N(last_valid_idx,:));
+%       V_topbin = mean(abs(V_ADCP(last_valid_idx,:)));
+%       VE_topbin = mean(abs(V_E(last_valid_idx,:)));
+%       VN_topbin = mean(abs(V_N(last_valid_idx,:)));
+        P = P(inds:inde);
+        nanflag = qcFlag(:,inds:inde);
+%       nanflag = qcFlag(inds:inde,:);
+        
+        % Log the ROI values from the drifters
+        ROI_ADCP(j,i).inds = inds;
+        ROI_ADCP(j,i).inde = inde;
+        ROI_ADCP(j,i).East = Easting;
+        ROI_ADCP(j,i).North = Northing;
+        ROI_ADCP(j,i).Lat = Lat;
+        ROI_ADCP(j,i).Lon = Lon;
+        ROI_ADCP(j,i).v_e = v_e;
+        ROI_ADCP(j,i).v_n = v_n;
+        ROI_ADCP(j,i).V = V;
+        ROI_ADCP(j,i).avg_V = nanmean(V);
+        ROI_ADCP(j,i).avg_ve = nanmean(v_e);
+        ROI_ADCP(j,i).avg_vn = nanmean(v_n);
+%       ROI(j,i).avg_V = nanmean(abs(V));
+%       ROI(j,i).avg_ve = nanmean(abs(v_e));
+%       ROI(j,i).avg_vn = nanmean(abs(v_n));
+        ROI_ADCP(j,i).drifter_Time_dattime = T;
+        ROI_ADCP(j,i).drifter_Time = T_datnum;
+        
+        % Log the values from ADCP when drifters were in range
+        ROI_ADCP(j,i).adcp_ve = V_E;
+        ROI_ADCP(j,i).adcp_vn = V_N;
+        ROI_ADCP(j,i).adcp_V = V_ADCP;
+        ROI_ADCP(j,i).last_idx = last_valid_idx;
+        ROI_ADCP(j,i).V_topbin = V_topbin;
+        ROI_ADCP(j,i).VE_topbin = VE_topbin;
+        ROI_ADCP(j,i).VN_topbin = VN_topbin;
+        ROI_ADCP(j,i).adcp_P = P;
+        ROI_ADCP(j,i).qcflag = nanflag;
+        ROI_ADCP(j,i).adcp_bin = adcp_bins(last_valid_idx);
+        ROI_ADCP(j,i).adcp_Time_datnum = time_adcp(inds:inde);
+        ROI_ADCP(j,i).adcp_Time_dattime = datetime(time_adcp(inds:inde), 'convertfrom','datenum');
+        ROI_ADCP(j,i).adcp_dbins = adcp_bins;
+        
+    end
+        
+end
+
+% Now do the extrapolated data
+
+ROI_EXTRAP = struct([]);
+
+for j = 1:numDeployments;
+    for i = 1:numDrifters
+        
+        Easting = drifters_level_1(j,i).East;
+        Northing = drifters_level_1(j,i).North;
+        Lat = drifters_level_1(j,i).Lat;
+        Lon = drifters_level_1(j,i).Lon;
+        v_e = drifters_level_1(j,i).v_e;
+        v_n = drifters_level_1(j,i).v_n;
+        V = drifters_level_1(j,i).V;
+        T = drifters_level_1(j,i).Date_and_time;
+        
+        T_datnum = datenum(T);
+        
+        d_E = Easting - E_loc;
+        d_N = Northing - N_loc;
+        dist = sqrt( d_E.^2 + d_N.^2);
+        thresh = 50; %meters
+        
+        %ROI_idxE = find(abs(d_E) <= 50);
+        %ROI_idxN = find(abs(d_N) <= 50);
+        ROI_idx = dist<=thresh; %intersect(ROI_idxE, ROI_idxN);
+        
+        if ~any(ROI_idx)
+            disp(['No points within threshold for j=', num2str(j), ', i=', num2str(i)]);
+            continue
+%         else
+%             keyboard;
+        end
+        
+        T_datnum = T_datnum(ROI_idx);
+        Easting = Easting(ROI_idx);
+        Northing = Northing(ROI_idx);
+        Lat = Lat(ROI_idx);
+        Lon = Lon(ROI_idx);
+        v_e = v_e(ROI_idx);
+        v_n = v_n(ROI_idx);
+        V = V(ROI_idx);
+        T = T(ROI_idx);
+        
+       
+        P = pressure;
+        V_E = V1_extrap;
+        V_N = V2_extrap;
+        time_adcp = time;
+        V_ADCP = sqrt(V_E.^2 + V_N.^2);
+        
+        dt = time_adcp - T_datnum(1);
+        [~,ind1] = min(abs(dt));
+        dt = time_adcp - T_datnum(end);
+        dt(ind1) = inf;
+        [~,ind2] = min(abs(dt));
+        
+        inds = min(ind1,ind2);
+        inde = max(ind1,ind2);
+        
+        V_E = V_E(:,inds:inde);
+        V_N = V_N(:,inds:inde);
+        V_ADCP = V_ADCP(:,inds:inde);
+%         valid_rows = ~isnan(V_ADCP(:,1));
+        valid_rows = ~isnan(V_ADCP(:,1)) & V_ADCP(:,1) ~= 0;
+        % last_valid_idx = find(valid_rows, 1, 'last');
+        last_valid_idx = 34;
+        V_topbin = mean(V_ADCP(last_valid_idx,:));
+        VE_topbin = mean(V_E(last_valid_idx,:));
+        VN_topbin = mean(V_N(last_valid_idx,:));
+%       V_topbin = mean(abs(V_ADCP(last_valid_idx,:)));
+%       VE_topbin = mean(abs(V_E(last_valid_idx,:)));
+%       VN_topbin = mean(abs(V_N(last_valid_idx,:)));
+        P = P(inds:inde);
+        nanflag = qcFlag(:,inds:inde);
+%       nanflag = qcFlag(inds:inde,:);
+        
+        % Log the ROI values from the drifters
+%         ROI_EXTRAP(j,i).inds = inds;
+%         ROI_EXTRAP(j,i).inde = inde;
+%         ROI_EXTRAP(j,i).East = Easting;
+%         ROI_EXTRAP(j,i).North = Northing;
+%         ROI_EXTRAP(j,i).Lat = Lat;
+%         ROI_EXTRAP(j,i).Lon = Lon;
+%         ROI_EXTRAP(j,i).v_e = v_e;
+%         ROI_EXTRAP(j,i).v_n = v_n;
+%         ROI_EXTRAP(j,i).V = V;
+%         ROI_EXTRAP(j,i).avg_V = nanmean(V);
+%         ROI_EXTRAP(j,i).avg_ve = nanmean(v_e);
+%         ROI_EXTRAP(j,i).avg_vn = nanmean(v_n);
+% %       ROI(j,i).avg_V = nanmean(abs(V));
+% %       ROI(j,i).avg_ve = nanmean(abs(v_e));
+% %       ROI(j,i).avg_vn = nanmean(abs(v_n));
+%         ROI_EXTRAP(j,i).drifter_Time_dattime = T;
+%         ROI_EXTRAP(j,i).drifter_Time = T_datnum;
+        
+        % Log the values from ADCP when drifters were in range
+        ROI_EXTRAP(j,i).adcp_ve = V_E;
+        ROI_EXTRAP(j,i).adcp_vn = V_N;
+        ROI_EXTRAP(j,i).adcp_V = V_ADCP;
+        ROI_EXTRAP(j,i).last_idx = last_valid_idx;
+        ROI_EXTRAP(j,i).V_topbin = V_topbin;
+        ROI_EXTRAP(j,i).VE_topbin = VE_topbin;
+        ROI_EXTRAP(j,i).VN_topbin = VN_topbin;
+        ROI_EXTRAP(j,i).adcp_P = P;
+        ROI_EXTRAP(j,i).qcflag = nanflag;
+        ROI_EXTRAP(j,i).adcp_bin = eof_bins(last_valid_idx);
+        ROI_EXTRAP(j,i).adcp_Time_datnum = time_adcp(inds:inde);
+        ROI_EXTRAP(j,i).adcp_Time_dattime = datetime(time_adcp(inds:inde), 'convertfrom','datenum');
+        ROI_EXTRAP(j,i).adcp_dbins = eof_bins;
+        
+    end
+        
+end
+
+% Now do the same for the EOF data
+
+ROI_EOF = struct([]);
+
+for j = 1:numDeployments;
+    for i = 1:numDrifters
+        
+        Easting = drifters_level_1(j,i).East;
+        Northing = drifters_level_1(j,i).North;
+        Lat = drifters_level_1(j,i).Lat;
+        Lon = drifters_level_1(j,i).Lon;
+        v_e = drifters_level_1(j,i).v_e;
+        v_n = drifters_level_1(j,i).v_n;
+        V = drifters_level_1(j,i).V;
+        T = drifters_level_1(j,i).Date_and_time;
+        
+        T_datnum = datenum(T);
+        
+        d_E = Easting - E_loc;
+        d_N = Northing - N_loc;
+        dist = sqrt( d_E.^2 + d_N.^2);
+        thresh = 50; %meters
+        
+        %ROI_idxE = find(abs(d_E) <= 50);
+        %ROI_idxN = find(abs(d_N) <= 50);
+        ROI_idx = dist<=thresh; %intersect(ROI_idxE, ROI_idxN);
+        
+        if ~any(ROI_idx)
+            disp(['No points within threshold for j=', num2str(j), ', i=', num2str(i)]);
+            continue
+%         else
+%             keyboard;
+        end
+        
+        T_datnum = T_datnum(ROI_idx);
+        Easting = Easting(ROI_idx);
+        Northing = Northing(ROI_idx);
+        Lat = Lat(ROI_idx);
+        Lon = Lon(ROI_idx);
+        v_e = v_e(ROI_idx);
+        v_n = v_n(ROI_idx);
+        V = V(ROI_idx);
+        T = T(ROI_idx);
+        
+       
+        P = pressure;
+        V_E = V1_EOF;
+        V_N = V2_EOF;
+        time_adcp = time;
+        V_ADCP = sqrt(V_E.^2 + V_N.^2);
+        
+        dt = time_adcp - T_datnum(1);
+        [~,ind1] = min(abs(dt));
+        dt = time_adcp - T_datnum(end);
+        dt(ind1) = inf;
+        [~,ind2] = min(abs(dt));
+        
+        inds = min(ind1,ind2);
+        inde = max(ind1,ind2);
+        
+        V_E = V_E(:,inds:inde);
+        V_N = V_N(:,inds:inde);
+        V_ADCP = V_ADCP(:,inds:inde);
+%         valid_rows = ~isnan(V_ADCP(:,1));
+        valid_rows = ~isnan(V_ADCP(:,1)) & V_ADCP(:,1) ~= 0;
+        % last_valid_idx = find(valid_rows, 1, 'last');
+        last_valid_idx = 20;
+        V_topbin = mean(V_ADCP(last_valid_idx,:));
+        VE_topbin = mean(V_E(last_valid_idx,:));
+        VN_topbin = mean(V_N(last_valid_idx,:));
+%       V_topbin = mean(abs(V_ADCP(last_valid_idx,:)));
+%       VE_topbin = mean(abs(V_E(last_valid_idx,:)));
+%       VN_topbin = mean(abs(V_N(last_valid_idx,:)));
+        P = P(inds:inde);
+        nanflag = qcFlag(:,inds:inde);
+%       nanflag = qcFlag(inds:inde,:);
+        
+        % Log the ROI values from the drifters
+%         ROI_EOF(j,i).inds = inds;
+%         ROI_EOF(j,i).inde = inde;
+%         ROI_EOF(j,i).East = Easting;
+%         ROI_EOF(j,i).North = Northing;
+%         ROI_EOF(j,i).Lat = Lat;
+%         ROI_EOF(j,i).Lon = Lon;
+%         ROI_EOF(j,i).v_e = v_e;
+%         ROI_EOF(j,i).v_n = v_n;
+%         ROI_EOF(j,i).V = V;
+%         ROI_EOF(j,i).avg_V = nanmean(V);
+%         ROI_EOF(j,i).avg_ve = nanmean(v_e);
+%         ROI_EOF(j,i).avg_vn = nanmean(v_n);
+% %       ROI(j,i).avg_V = nanmean(abs(V));
+% %       ROI(j,i).avg_ve = nanmean(abs(v_e));
+% %       ROI(j,i).avg_vn = nanmean(abs(v_n));
+%         ROI_EOF(j,i).drifter_Time_dattime = T;
+%         ROI_EOF(j,i).drifter_Time = T_datnum;
+        
+        % Log the values from ADCP when drifters were in range
+        ROI_EOF(j,i).adcp_ve = V_E;
+        ROI_EOF(j,i).adcp_vn = V_N;
+        ROI_EOF(j,i).adcp_V = V_ADCP;
+        ROI_EOF(j,i).last_idx = last_valid_idx;
+        ROI_EOF(j,i).V_topbin = V_topbin;
+        ROI_EOF(j,i).VE_topbin = VE_topbin;
+        ROI_EOF(j,i).VN_topbin = VN_topbin;
+        ROI_EOF(j,i).adcp_P = P;
+        ROI_EOF(j,i).qcflag = nanflag;
+        ROI_EOF(j,i).adcp_bin = eof_bins(last_valid_idx);
+        ROI_EOF(j,i).adcp_Time_datnum = time_adcp(inds:inde);
+        ROI_EOF(j,i).adcp_Time_dattime = datetime(time_adcp(inds:inde), 'convertfrom','datenum');
+        ROI_EOF(j,i).adcp_dbins = eof_bins;
+        
+    end
+        
+end
+
+%% Compare ALL the currents
+
+drifter_V = [ROI_ADCP(:,:).avg_V ROI_ADCP(:,:).avg_V ROI_ADCP(:,:).avg_V]
+adcp_V = [ROI_ADCP(:,:).V_topbin ROI_EXTRAP(:,:).V_topbin ROI_EOF(:,:).V_topbin]
+
+r_V = corrcoef(drifter_V,adcp_V);
+r_V_value = r_V(1,2)
+
+
+drifter_ve = [ROI_ADCP(:,:).avg_ve ROI_ADCP(:,:).avg_ve ROI_ADCP(:,:).avg_ve]
+adcp_VE = [ROI_ADCP(:,:).VE_topbin ROI_EXTRAP(:,:).VE_topbin ROI_EOF(:,:).VE_topbin]
+
+r_VE = corrcoef(drifter_ve,adcp_VE);
+r_VE_value = r_VE(1,2)
+
+drifter_vn = [ROI_ADCP(:,:).avg_vn ROI_ADCP(:,:).avg_vn ROI_ADCP(:,:).avg_vn]
+adcp_VN = [ROI_ADCP(:,:).VN_topbin ROI_EXTRAP(:,:).VN_topbin ROI_EOF(:,:).VN_topbin]
+
+r_VN = corrcoef(drifter_vn,adcp_VN);
+r_VN_value = r_VN(1,2)
+
+%% Save these values to COMP structure
+
+COMP.drifter_V = drifter_V;
+COMP.adcp_V = adcp_V;
+COMP.r_V_value = r_V_value;
+
+COMP.drifter_ve = drifter_ve;
+COMP.adcp_ve = adcp_VE;
+COMP.r_VE_value = r_VE_value;
+
+COMP.drifter_vn = drifter_vn;
+COMP.adcp_vn = adcp_VN;
+COMP.r_VN_value = r_VN_value;
+
+%% Calculate rms
+mean(abs(adcp_VE))
+mean(abs(drifter_ve))
+RMS_E = rms(drifter_ve-adcp_VE)
+mean(abs(adcp_VN))
+mean(abs(drifter_vn))
+RMS_N = rms(drifter_vn-adcp_VN)
+mean(abs(adcp_V))
+mean(abs(drifter_V))
+RMS_V = rms(drifter_V-adcp_V)
+
+%% Seperate Comparison figures
+adcp = figure;
+scatter([ROI_ADCP(:,:).avg_V], [ROI_ADCP(:,:).V_topbin], 36, 'r', 'o', 'filled')
+hold on
+scatter([ROI_ADCP(:,:).avg_ve], [ROI_ADCP(:,:).VE_topbin], 36, 'b', 's', 'filled');
+scatter([ROI_ADCP(:,:).avg_vn], [ROI_ADCP(:,:).VN_topbin], 36, 'g', '^', 'filled');
+xlim([-0.4 0.4]);
+ylim([-0.4 0.4]);
+grid on
+y = -.4:0.05:0.4;
+x = -.4:0.05:0.4;
+plot(x,y,'k');
+legend('V', 'u', 'v','1:1 line', 'Location', 'best')
+xlabel('Drifter Velocities (m/s)');
+ylabel('ADCP Velocities (m/s)');
+title('ADCP OBSERVATIONS');
+
+exportgraphics(adcp, fullfile(cfg.out.comp_figures, ['_adcp_drifter_comp']), 'Resolution', 300);
+
+extrap = figure;
+scatter([ROI_ADCP(:,:).avg_V], [ROI_EXTRAP(:,:).V_topbin], 36, 'r', 'o', 'filled')
+hold on
+scatter([ROI_ADCP(:,:).avg_ve], [ROI_EXTRAP(:,:).VE_topbin], 36, 'b', 's', 'filled');
+scatter([ROI_ADCP(:,:).avg_vn], [ROI_EXTRAP(:,:).VN_topbin], 36, 'g', '^', 'filled');
+%xlim([-0.4 0.4]);
+%ylim([-0.4 0.4]);
+grid on
+y = -.4:0.05:0.4;
+x = -.4:0.05:0.4;
+plot(x,y,'k');
+legend('V', 'u', 'v','1:1 line', 'Location', 'best')
+xlabel('Drifter Velocities (m/s)');
+ylabel('ADCP Velocities (m/s)');
+title('EXTRAPOLATED OBSERVATIONS');
+
+exportgraphics(adcp, fullfile(cfg.out.comp_figures, ['_adcp_drifter_comp']), 'Resolution', 300);
+
+EOF = figure;
+scatter([ROI_ADCP(:,:).avg_V], [ROI_EOF(:,:).V_topbin], 36, 'r', 'o', 'filled')
+hold on
+scatter([ROI_ADCP(:,:).avg_ve], [ROI_EOF(:,:).VE_topbin], 36, 'b', 's', 'filled');
+scatter([ROI_ADCP(:,:).avg_vn], [ROI_EOF(:,:).VN_topbin], 36, 'g', '^', 'filled');
+%xlim([-0.4 0.4]);
+%ylim([-0.4 0.4]);
+grid on
+y = -.4:0.05:0.4;
+x = -.4:0.05:0.4;
+plot(x,y,'k');
+legend('V', 'u', 'v','1:1 line', 'Location', 'best')
+xlabel('Drifter Velocities (m/s)');
+ylabel('ADCP Velocities (m/s)');
+title('EOF');
+
+%% All together
+
+All = figure;
+scatter(drifter_V, adcp_V, 36, 'r', 'o', 'filled')
+hold on
+scatter(drifter_ve, adcp_VE, 36, 'b', 's', 'filled');
+scatter(drifter_vn, adcp_VN, 36, 'g', '^', 'filled');
+% xlim([-0.4 0.4]);
+% ylim([-0.4 0.4]);
+grid on
+y = -.4:0.05:0.4;
+x = -.4:0.05:0.4;
+plot(x,y,'k');
+legend('V', 'u', 'v','1:1 line', 'Location', 'best')
+xlabel('Drifter Velocities (m/s)');
+ylabel('ADCP Velocities (m/s)');
+title('All data');
+end

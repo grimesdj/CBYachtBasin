@@ -1,7 +1,7 @@
 function cfg = get_obs_config(obsPeriod, adcpLoc, root_dir, root_data)
 
 % Point to post Porcessing folder
-cfg.root_dir = [root_dir, 'POST_PROCESSING_V2\'];
+cfg.root_dir = [root_dir, 'code\'];
 
 % Wherever you hva the ADCP data on your machine
 cfg.root_data = [root_data, 'CB_YachtBasin\'];
@@ -10,16 +10,6 @@ cfg.obsTag = [strrep(obsPeriod,' ','_') '_' adcpLoc];
 
 
 
-%% Set figure output dirs
-cfg.out.adcp_figures = fullfile(cfg.root_dir, 'FIGURES', 'ADCP');
-cfg.out.drifters_figures = fullfile(cfg.root_dir, 'FIGURES', 'DRIFTERS');
-cfg.out.comp_figures = fullfile(cfg.root_dir, 'FIGURES', 'COMP');
-
-
-% Make sure output folders exist
-if ~exist(cfg.out.adcp_figures, 'dir'); mkdir(cfg.out.adcp_figures); end
-if ~exist(cfg.out.drifters_figures, 'dir'); mkdir(cfg.out.drifters_figures); end
-if ~exist(cfg.out.comp_figures, 'dir'); mkdir(cfg.out.comp_figures); end
 
 
 switch [obsPeriod, adcpLoc]
@@ -167,6 +157,17 @@ end
         if ~exist(cfg.out.adcp_data, 'dir'); mkdir(cfg.out.adcp_data); end
         if ~exist(cfg.out.drifters_data, 'dir'); mkdir(cfg.out.drifters_data); end
         if ~exist(cfg.out.comp_data, 'dir'); mkdir(cfg.out.comp_data); end
+        
+ %% Set figure output dirs
+        cfg.out.adcp_figures = fullfile(cfg.root_data, 'PROCESSED_DATA', 'ADCP','FIGURES');
+        cfg.out.drifters_figures = fullfile(cfg.root_data, 'PROCESSED_DATA', 'DRIFTERS','FIGURES');
+        cfg.out.comp_figures = fullfile(cfg.root_data,'PROCESSED_DATA', 'COMP', 'FIGURES');
+
+
+ % Make sure output folders exist
+        if ~exist(cfg.out.adcp_figures, 'dir'); mkdir(cfg.out.adcp_figures); end
+        if ~exist(cfg.out.drifters_figures, 'dir'); mkdir(cfg.out.drifters_figures); end
+        if ~exist(cfg.out.comp_figures, 'dir'); mkdir(cfg.out.comp_figures); end
 
 
 end
