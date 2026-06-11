@@ -1,9 +1,9 @@
 % directory where all data is stored:
-data_dir = '/Users/derekgrimes/OneDriveUNCW/DATA/CB_YachtBasin/NovDep/';
+data_dir = '/Users/derekgrimes/OneDriveUNCW/DATA/CB_YachtBasin/MarshMadness/';
 % RBR-CTD is in "RBR" sub-directory:
-ctd_dir = [data_dir,filesep,'CTD',filesep];
+ctd_dir = [data_dir,filesep,'RBR',filesep];
 % example serial number:
-SN = 210866;
+SN = 210864;
 
 % build full path to data file
 rbrFileStr = sprintf('%s%04d*.rsk',ctd_dir,SN);
