@@ -1,0 +1,14 @@
+# macOS
+.DS_Store
+
+# Personal research outputs
+exports/
+
+# Future folders
+analysis/
+figures/
+documentation/
+inventory/
+
+# MATLAB autosave files
+*.asv
