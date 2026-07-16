@@ -1,10 +1,10 @@
 clear all
 close all
 % Enter input /directory/ and fileName root without file extension
-rootDir    = '/Users/derekgrimes/OneDriveUNCW/Data/CB_YachtBasin/NovDep/AQD5459/';
-inputDirs  = {'./','./'};
-inputFiles = {'CB_N401','CB_N401'};
-outputNames= {'CB_N401_01','CB_N401_02'};
+rootDir    = '/Users/derekgrimes/OneDriveUNCW/Data/CB_YachtBasin/JuneJamboree/ADCP/';
+inputDirs  = {'AQD5459/','AQD2710/'};
+inputFiles = {'CB_N502','CB_S501'};
+outputNames= {'CB_N502','CB_S501'};
 for jj=1:length(inputDirs)
 clearvars -except rootDir inputDirs inputFiles outputNames jj
 %
@@ -19,11 +19,11 @@ L0Dir   = inputDir;
 L0Name  = [outputNames{jj},'_L0'];
 % Enter time when instrument was in air for pressure offset
 if jj==1
-    atmTime = [datenum('11/03/2025 11:00:00'), datenum('11/03/2025 14:40:00')];
-    depTime = [datenum('11/03/2025 18:30:00'), datenum('11/12/2025 12:00:00')];
+    atmTime = [datenum('03-Jun-2026 16:20:00'), datenum('03-Jun-2026 17:00:00')];
+    depTime = [datenum('03-Jun-2026 17:30:00'), datenum('24-Jun-2026 11:30:00')];
 else
-    atmTime = [datenum('11/03/2025 11:00:00'), datenum('11/03/2025 14:40:00')];
-    depTime = [datenum('12-Nov-2025 14:30:00'), datenum('21-Nov-2025 13:00:00')];
+    atmTime = [datenum('03-Jun-2026 16:20:00'), datenum('03-Jun-2026 17:00:00')];
+    depTime = [datenum('03-Jun-2026 17:40:00'), datenum('24-Jun-2026 12:10:00')];
 end
 % Enter path to save figures
 figDir = [inputDir,filesep,'figures',filesep];
