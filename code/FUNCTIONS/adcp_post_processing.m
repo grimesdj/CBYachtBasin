@@ -300,6 +300,8 @@ EOF.zonh_grid = zonh_grid;
 
 %% Complex EOF analysis
 
+[M,N] = size(U_mapped);
+
 d_complex0 = (U_mapped + sqrt(-1)*V_mapped).';
 
 % remove the trend

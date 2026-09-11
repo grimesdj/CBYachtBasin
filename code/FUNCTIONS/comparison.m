@@ -1,4 +1,4 @@
-function [ROI_ADCP, ROI_EXTRAP, ROI_EOF, COMP] = comp(adcp_level_1, adcp_level_2, drifters_level_1, cfg)
+function [ROI_ADCP, ROI_EXTRAP, ROI_EOF, COMP] = comparison(adcp_level_1, adcp_level_2, drifters_level_1, cfg)
 
 proj = projcrs(32119);
 
@@ -39,7 +39,8 @@ V2_extrap = v2_extrap';
 V2_EOF = v2_EOF;
 % V_N = adcp_level_1.V_N;
 adcp_bins = adcp_level_1.bins;
-eof_bins = adcp_level_2.dbins_extrap;
+eof_bins = adcp_level_2.zonh_grid;
+extrap_bins = adcp_level_2.dbins_extrap;
 % East_avg = adcp_level_1.East_avg;
 % North_avg = adcp_level_1.North_avg;
 pressure = adcp_level_1.pressure;
@@ -279,10 +280,10 @@ for j = 1:numDeployments;
         ROI_EXTRAP(j,i).VN_topbin = VN_topbin;
         ROI_EXTRAP(j,i).adcp_P = P;
         ROI_EXTRAP(j,i).qcflag = nanflag;
-        ROI_EXTRAP(j,i).adcp_bin = eof_bins(last_valid_idx);
+        ROI_EXTRAP(j,i).adcp_bin = extrap_bins(last_valid_idx);
         ROI_EXTRAP(j,i).adcp_Time_datnum = time_adcp(inds:inde);
         ROI_EXTRAP(j,i).adcp_Time_dattime = datetime(time_adcp(inds:inde), 'convertfrom','datenum');
-        ROI_EXTRAP(j,i).adcp_dbins = eof_bins;
+        ROI_EXTRAP(j,i).adcp_dbins = extrap_bins;
         
     end
         
@@ -315,12 +316,12 @@ for j = 1:numDeployments;
         %ROI_idxN = find(abs(d_N) <= 50);
         ROI_idx = dist<=thresh; %intersect(ROI_idxE, ROI_idxN);
         
-        noPointsCount = 0;
+        NoPointsCount = 0;
         
         if ~any(ROI_idx)
             disp(['No points within threshold for j=', num2str(j), ', i=', num2str(i)]);
             
-            noPointsCount = NoPointsCount + 1;
+            NoPointsCount = NoPointsCount + 1;
             
             continue
 %         else
@@ -471,7 +472,7 @@ xlabel('Drifter Velocities (m/s)');
 ylabel('ADCP Velocities (m/s)');
 title('ADCP OBSERVATIONS');
 
-exportgraphics(adcp, fullfile(cfg.out.comp_figures, ['_adcp_drifter_comp']), 'Resolution', 300);
+% $$$ exportgraphics(adcp, fullfile(cfg.out.comp_figures, ['_adcp_drifter_comp']), 'Resolution', 300);
 
 extrap = figure;
 scatter([ROI_ADCP(:,:).avg_V], [ROI_EXTRAP(:,:).V_topbin], 36, 'r', 'o', 'filled')
@@ -489,7 +490,7 @@ xlabel('Drifter Velocities (m/s)');
 ylabel('ADCP Velocities (m/s)');
 title('EXTRAPOLATED OBSERVATIONS');
 
-exportgraphics(extrap, fullfile(cfg.out.comp_figures, ['_extrap_drifter_comp']), 'Resolution', 300);
+% $$$ exportgraphics(extrap, fullfile(cfg.out.comp_figures, ['_extrap_drifter_comp']), 'Resolution', 300);
 
 EOF = figure;
 scatter([ROI_ADCP(:,:).avg_V], [ROI_EOF(:,:).V_topbin], 36, 'r', 'o', 'filled')
@@ -507,7 +508,7 @@ xlabel('Drifter Velocities (m/s)');
 ylabel('ADCP Velocities (m/s)');
 title('EOF');
 
-exportgraphics(EOF, fullfile(cfg.out.comp_figures, ['_eof_drifter_comp']), 'Resolution', 300);
+% $$$ exportgraphics(EOF, fullfile(cfg.out.comp_figures, ['_eof_drifter_comp']), 'Resolution', 300);
 
 %% All together
 
@@ -527,5 +528,5 @@ xlabel('Drifter Velocities (m/s)');
 ylabel('ADCP Velocities (m/s)');
 title('All data');
 
-exportgraphics(All, fullfile(cfg.out.comp_figures, ['_all_drifter_comp']), 'Resolution', 300);
+% $$$ exportgraphics(All, fullfile(cfg.out.comp_figures, ['_all_drifter_comp']), 'Resolution', 300);
 end
