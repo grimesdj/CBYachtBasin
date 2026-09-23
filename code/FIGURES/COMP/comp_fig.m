@@ -1,0 +1,75 @@
+clear all;
+close all;
+%%
+% main_dir = 'C:\Users\bcm3620\OneDrive - UNC-Wilmington\CB_YachtBasin\';
+main_dir = 'C:\Users\Ben\OneDrive - UNC-Wilmington\CB_YachtBasin\';
+%%
+march_dir = ([main_dir, 'MarshMadness\PROCESSED_DATA\COMP']);
+
+may_dir = ([main_dir,'MarshMayhem\PROCESSED_DATA\COMP']);
+
+oct_dir = ([main_dir, 'FallFrolic\PROCESSED_DATA\COMP']);
+
+% nov_dir = ([main_dir, 'NovDep\PROCESSED_DATA\COMP']);
+
+june_dir = ([main_dir,'JuneJamboree\PROCESSED_DATA\COMP'])
+
+
+march_files = dir(fullfile(march_dir, '*North*ROI*.mat'));
+may_files   = dir(fullfile(may_dir, '*North*ROI*.mat'));
+june_files  = dir(fullfile(june_dir, '*North*ROI*.mat'));
+
+datafiles = [march_files; may_files; june_files];
+
+ADCP_files = datafiles(contains({datafiles.name}, '_ADCP'));
+EOF_files = datafiles(contains({datafiles.name}, '_EOF'));
+
+adcp = figure;
+hold on;
+
+for i = 1:size(ADCP_files,1)
+
+    filename = fullfile(ADCP_files(i).folder, ADCP_files(i).name);
+    S = load(filename);
+    ROI = S.ROI_ADCP;
+
+
+    hV = scatter([ROI.avg_V],  [ROI.V_topbin],  36, 'b', 'o', 'filled');
+    hu = scatter([ROI.avg_ve], [ROI.VE_topbin], 36, 'r', 'o', 'filled');
+    hv = scatter([ROI.avg_vn], [ROI.VN_topbin], 36, 'g', 'o', 'filled');
+
+
+
+end
+
+hold off;
+
+eof = figure;
+hold on;
+
+for i = 1:size(EOF_files,1)
+
+    filename = fullfile(EOF_files(i).folder, EOF_files(i).name);
+    S = load(filename);
+    ROI1 = S.ROI_EOF;
+
+    % Skip empty
+    if isempty([ROI.avg_V])
+        continue
+    end
+
+
+    hV = scatter([ROI.avg_V],  [ROI1.V_topbin],  36, 'b', 'o', 'filled');
+    hu = scatter([ROI.avg_ve], [ROI1.VE_topbin], 36, 'r', 'o', 'filled');
+    hv = scatter([ROI.avg_vn], [ROI1.VN_topbin], 36, 'g', 'o', 'filled');
+
+
+
+end
+
+hold off;
+
+
+
+
+

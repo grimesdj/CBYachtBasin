@@ -2,20 +2,31 @@ clear all;
 close all;
 %% Main driver script
 
-% Wherever you have the post processing folder on your local machine
+% Wherever you have the data folder on your local machine
 root_data = 'C:\Users\bcm3620\OneDrive - UNC-Wilmington\'; %This is the path to the CB YACHT BASIN shared folder on your machine
+% Wherever you have the post processing GIT repo
 root_dir = 'C:\Users\bcm3620\OneDrive - UNC-Wilmington\THESIS\CBYachtBasin\'; % Path to the Post Processing folder on your machine
+
+% root_data = 'C:\Users\Ben\OneDrive - UNC-Wilmington\'; %This is the path to the CB YACHT BASIN shared folder on your machine
+% root_dir = 'C:\Users\Ben\OneDrive - UNC-Wilmington\THESIS\CBYachtBasin\'; % Path to the Post Processing folder on your machine
+
+% DATES FOR SOPHIE MARCH 10-11 & MAY 27-28
 
 
 
 %% Choose the observation period
-obsPeriod = 'FallFrolic 101025';
-% Options:
-% 'MarshMadness'
-% 'MarshMayhem'
+obsPeriod = 'ALL';
+% Options: *IF DOING SHEET DATA SKIP DRIFTER LEVEL 1!!!*
+% 'MarshMadness' *South ADCP was HR (ONLY SAMPLED HALF WATER COLUMN*
+% 'MarshMayhem' *South ADCP was HR (ONLY SAMPLED HALF WATER COLUMN*
 % 'FallFrolic 100825'
+% 'FallFrolic 100825 SHEET'
 % 'FallFrolic 101025'
-% 'NovDep'
+% 'FallFrolic 101025 SHEET'
+% 'NovDep' *ONLY HAD NORTH ADCP*
+% 'JuneJamboree'
+% 'SummerFlood" *ADCP data not yet available*
+% 'ALL' **THIS IS FOR ALL OBS-PERIOD ANALYSIS, NOT INTENDED FOR INTIAL PP**
 
 %% Choose North or South ADCP for analysis
 adcpLoc = 'NorthADCP';
@@ -31,31 +42,64 @@ disp(cfg);
 addpath(genpath(fullfile(cfg.root_dir, 'FUNCTIONS')));
 
 %% Run North ADCP level 1
-
-inputDir = cfg.adcp_input_dir;
-inputFile = cfg.adcp_input_file;
-
-[adcp_level_1] = load_and_save_adcp(inputDir, inputFile, cfg);
+[adcp_level_1] = load_and_save_adcp(cfg);
 
 save(fullfile(cfg.out.adcp_data, [cfg.obsTag '_adcp_level_1.mat']), 'adcp_level_1');
 
 %% Run Drifter level 1
-dep_fin = readtable(cfg.drifters_dep_times);
-drifters_root_dir = cfg.drifters_raw_dir;
 
-[drifters_level_1] = drifter_post_processing(dep_fin,drifters_root_dir, cfg);
+if cfg.run_drifter_level_1
 
-save(fullfile(cfg.out.drifters_data, [cfg.obsTag '_drifters_level_1.mat']), 'drifters_level_1');
+    [drifters_level_1,raw_drifters] = drifter_post_processing(cfg);
+
+    save(fullfile(cfg.out.drifters_data, ...
+        [cfg.name '_drifters_level_1.mat']), ...
+        'drifters_level_1');
+%     save(fullfile(cfg.out.drifters_data, ...
+%         [cfg.name '_raw_drifters.mat']), 'raw_drifters');
+
+else
+
+    fprintf('Skipping Drifter Level 1 for %s\n', cfg.name);
+
+end
+
+
+%% Run Drifter level 2: Temporal Res and Assigning Tidal phase and region
+
+[TidalPhase, drifters_level_2] = findTidalPhaseandRegion(cfg);
+
+save(fullfile(cfg.out.drifters_data, [cfg.name '_drifters_level_2.mat']), 'drifters_level_2');
+save(fullfile(cfg.out.drifters_data, [cfg.name '_TidalPhase.mat']), 'TidalPhase');
+
+
+if cfg.run_drifter_level_1
+
+    Results = veloAnalysis(cfg);
+
+    save(fullfile(cfg.out.drifters_data, [cfg.name '_TemporalRes_RMSE.mat']), 'Results');
+
+%     save(fullfile(cfg.out.drifters_data, ...
+%         [cfg.name '_raw_drifters.mat']), 'raw_drifters');
+
+else
+
+    fprintf('Skipping VELO ANALYSIS (CREATING DIFF TEMPORAL DIFFERENCING WINDOWS) for %s\n', cfg.name);
+
+end
+
+
+
 
 %% Run ADCP level 2
 
-[adcp_level_2] = adcp_post_processing(adcp_level_1, cfg);
+[adcp_level_2] = adcp_post_processing(cfg);
 
 save(fullfile(cfg.out.adcp_data, [cfg.obsTag '_adcp_level_2.mat']), 'adcp_level_2');
 
 %% Run Level 3: Drifter and ADCP comparison
 
-[ROI_ADCP, ROI_EXTRAP, ROI_EOF, COMP] = comparison(adcp_level_1, adcp_level_2, drifters_level_1, cfg);
+[ROI_ADCP, ROI_EXTRAP, ROI_EOF, COMP] = comparison(cfg);
 
 save(fullfile(cfg.out.comp_data, [cfg.obsTag '_ROI_ADCP.mat']), 'ROI_ADCP');
 save(fullfile(cfg.out.comp_data, [cfg.obsTag '_ROI_EXTRAP.mat']), 'ROI_EXTRAP');
@@ -64,6 +108,6 @@ save(fullfile(cfg.out.comp_data, [cfg.obsTag '_COMP.mat']), 'COMP');
 
 %% Run Level 4: Range of Instrument analysis
 
-ROI(adcp_level_2, ROI_ADCP, cfg)
+ROI(cfg);
 
 

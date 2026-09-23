@@ -1,4 +1,4 @@
- function trimmed_drifters = trimDrifterDataByDeployment_SHEET(drifters, deployments)
+ function trimmed_drifters = trimDrifterDataByDeployment(drifters, deployments)
     % Trim each drifter's track based on its deployment time
     % Inputs:
     % - drifters: struct array with fields lat, lon, time
@@ -14,6 +14,7 @@
         if size(trimmed_drifters,2)<idx
             % don't do anything to rowx, until we fill first column
         elseif ~isempty(trimmed_drifters(rowx,idx).Lat)
+
             rowx = rowx+1;
         end
 %         deploy_time = deployments.Startdattime(i);    % deployment timestamp
@@ -41,16 +42,35 @@
         E = drifters(idy).East;
         N = drifters(idy).North;
         t = drifters(idy).Date_and_time;
+        e_time = drifters(idy).etime;
         %t = datetime(t,'ConvertFrom','datenum');
 %         A = drifters(idy).Alt;
-%         Velo = drifters(idy).Speed;
+        Velo = drifters(idy).Speed;
 %         Ang = drifters(idy).Angle;
 %         Volt = drifters(idy).Volt;
         v_e = drifters(idy).v_e;
         v_n = drifters(idy).v_n;
         V = drifters(idy).V;
         
+        if isempty(t)
+            trimmed_drifters(rowx,idx).Start_time = NaT;
+            trimmed_drifters(rowx,idx).End_time = NaT;   
+            continue
+        end
         
+        
+        latThresh = 0.0002;
+        lonThresh = 0.0002;
+        
+        dLat = abs(diff(lat));
+        dLon = abs(diff(lon));
+        
+        badIdx = [false; (dLat > latThresh) | (dLon > lonThresh)];
+        
+        lat(badIdx) = [];
+        lon(badIdx) = [];
+        
+        buffer = seconds(30);
 
         target_start = deployments.Startdattime(i);  % Example: pick one from col1
         %[~, idy_start(i)] = min(abs(drifters(i).Date_and_time - target_start));
@@ -61,8 +81,8 @@
         % trim the pull index to account for pull time being next deployment time!!
         % need to keep better track of pull times
         %idy_pull = idy_pull-12;
-        idt = find( t >= target_start &...
-                    t <= target_pull);
+        idt = find( t >= target_start + buffer &...
+                    t <= target_pull - buffer);
                 
         if isempty(idt)
             trimmed_drifters(rowx,idx).Start_time = NaT;
@@ -72,6 +92,7 @@
         end
 
         % Trim data
+        trimmed_drifters(rowx,idx).ID = drifters(idy).ID;
         trimmed_drifters(rowx,idx).Lat = lat(idt);
         trimmed_drifters(rowx,idx).Lon = lon(idt);
         trimmed_drifters(rowx,idx).East = E(idt);
@@ -79,8 +100,9 @@
         trimmed_drifters(rowx,idx).Date_and_time = t(idt);
         trimmed_drifters(rowx,idx).Start_time = t(idt(1));
         trimmed_drifters(rowx,idx).End_time = t(idt(end));
+        trimmed_drifters(rowx,idx).e_time = e_time(idt);
 %         trimmed_drifters(rowx,idx).Alt = A(idt);
-%         trimmed_drifters(rowx,idx).Speed = Velo(idt);
+        trimmed_drifters(rowx,idx).Speed = Velo(idt);
 %         trimmed_drifters(rowx,idx).Angle = Ang(idt);
 %         trimmed_drifters(rowx,idx).Volt = Volt(idt);
         trimmed_drifters(rowx,idx).v_e = v_e(idt);

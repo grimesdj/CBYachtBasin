@@ -1,0 +1,730 @@
+function [TidalData] = TideandRegionAnalysis_v1(cfg)
+
+
+%% Choose temporal differencing window
+
+temporal_res = 8;
+
+% Options:
+% 1, 2, 4, 8, 16, 32, 64, 128, 256
+
+
+%% Results files
+
+obsFiles = { ...
+    'MarshMadness\PROCESSED_DATA\DRIFTERS\MarshMadness_TemporalRes_RMSE.mat'
+    'MarshMayhem\PROCESSED_DATA\DRIFTERS\MarshMayhem_TemporalRes_RMSE.mat'
+    'FallFrolic\PROCESSED_DATA\DRIFTERS\FallFrolic_100825_TemporalRes_RMSE.mat'
+    'FallFrolic\PROCESSED_DATA\DRIFTERS\FallFrolic_101025_TemporalRes_RMSE.mat'
+    'NovDep\PROCESSED_DATA\DRIFTERS\NovDep_TemporalRes_RMSE.mat'
+    'JuneJamboree\PROCESSED_DATA\DRIFTERS\JuneJamboree_TemporalRes_RMSE.mat'};
+
+names = { ...
+    'MarshMadness', ...
+    'MarshMayhem', ...
+    'FallFrolic_100825', ...
+    'FallFrolic_101025', ...
+    'NovDep', ...
+    'JuneJamboree'};
+
+
+%% Tidal phases
+
+phases = {'High','Low','Rising','Falling'};
+
+TidalData = struct();
+
+
+%% Initialize region transition storage
+
+RegionProb = struct();
+
+TrajectoryTransitions = struct([]);
+
+for p = 1:numel(phases)
+
+    phase = phases{p};
+
+    RegionProb.(phase).StartRegion = [];
+    RegionProb.(phase).NextRegion = [];
+
+end
+
+
+%% Load Results and organize by tidal phase
+
+for i = 1:numel(obsFiles)
+
+    filename = fullfile(cfg.root_data,obsFiles{i});
+
+    S = load(filename);
+
+    Results = S.Results;
+
+    obs = names{i};
+
+
+    %% Loop through deployments / drifters
+
+    for d = 1:size(Results,1)
+
+        for j = 1:size(Results,2)
+
+            %% Skip empty Results entries
+
+            if isempty(Results(d,j).ID)
+                continue
+            end
+
+            %% Region transition analysis
+            
+
+            regions_transition = Results(d,j).Region;
+            tides_transition = string(Results(d,j).TidePhase);
+
+            regions_transition = regions_transition(:);
+            tides_transition = tides_transition(:);
+
+
+            %% Remove NaNs, but keep region 0 (this defines exiting the domain)
+
+            valid_transition = ...
+                ~isnan(regions_transition);
+
+            regions_transition = ...
+                regions_transition(valid_transition);
+
+            tides_transition = ...
+                tides_transition(valid_transition);
+
+
+            %% Find points where drifter enters a new region
+
+            if numel(regions_transition) >= 2
+
+                changeIdx = ...
+                    [1; find(diff(regions_transition) ~= 0) + 1];
+
+                regionSequence = ...
+                    regions_transition(changeIdx);
+
+                phaseSequence = ...
+                    tides_transition(changeIdx);
+                
+                %% Save full transition sequence for this trajectory
+
+                traj_counter = traj_counter + 1;
+
+                TrajectoryTransitions(traj_counter).Observation = obs;
+
+                TrajectoryTransitions(traj_counter).ID = ...
+                    Results(d,j).ID;
+
+                TrajectoryTransitions(traj_counter).RegionSequence = ...
+                    regionSequence;
+
+                TrajectoryTransitions(traj_counter).PhaseSequence = ...
+                    phaseSequence;
+
+
+                %% Record region -> next region transitions
+
+                for kk = 1:numel(regionSequence)-1
+
+                    phase_here = char(phaseSequence(kk));
+
+                    if isfield(RegionProb,phase_here)
+
+                        RegionProb.(phase_here). ...
+                            StartRegion(end+1,1) = ...
+                            regionSequence(kk);
+
+                        RegionProb.(phase_here). ...
+                            NextRegion(end+1,1) = ...
+                            regionSequence(kk+1);
+
+                    end
+
+                end
+
+            end
+
+
+            
+            %% Obtain desired temporal resolution
+            
+
+            if temporal_res == 1
+
+                Time = Results(d,j).Time;
+                Lat = Results(d,j).Lat;
+                Lon = Results(d,j).Lon;
+                V = Results(d,j).V_1Hz;
+                TidePhase = Results(d,j).TidePhase;
+                Regions = Results(d,j).Region;
+
+                % Components are not currently stored at 1 Hz
+                v_e = [];
+                v_n = [];
+
+            else
+
+                %% Find selected temporal resolution
+
+                res_idx = find( ...
+                    [Results(d,j).TemporalRes.Seconds] == temporal_res, ...
+                    1);
+
+
+                if isempty(res_idx)
+                    continue
+                end
+
+
+                TR = Results(d,j).TemporalRes(res_idx);
+
+
+                Time = TR.Time;
+                Lat = TR.Lat;
+                Lon = TR.Lon;
+                V = TR.V;
+                v_e = TR.V_e;
+                v_n = TR.V_n;
+                TidePhase = TR.TidePhase;
+                Regions = TR.Region;
+
+            end
+
+
+            %% Make sure tidal phase is string
+
+            TidePhase = string(TidePhase);
+
+            %% Separate observations by tidal phase
+            
+
+            for p = 1:numel(phases)
+
+                phase = phases{p};
+
+                idx = TidePhase == phase;
+
+
+                if ~any(idx)
+                    continue
+                end
+
+
+                %% Add new trajectory to this phase
+
+                if ~isfield(TidalData,phase) || ...
+                   ~isfield(TidalData.(phase),obs)
+
+                    k = 1;
+
+                else
+
+                    k = numel(TidalData.(phase).(obs)) + 1;
+
+                end
+
+
+                TidalData.(phase).(obs)(k).ID = ...
+                    Results(d,j).ID;
+
+                TidalData.(phase).(obs)(k).Lat = ...
+                    Lat(idx);
+
+                TidalData.(phase).(obs)(k).Lon = ...
+                    Lon(idx);
+
+                TidalData.(phase).(obs)(k).Time = ...
+                    Time(idx);
+
+                TidalData.(phase).(obs)(k).Regions = ...
+                    Regions(idx);
+
+                TidalData.(phase).(obs)(k).V = ...
+                    V(idx);
+
+
+                %% Velocity components
+
+                if temporal_res > 1
+
+                    TidalData.(phase).(obs)(k).v_e = ...
+                        v_e(idx);
+
+                    TidalData.(phase).(obs)(k).v_n = ...
+                        v_n(idx);
+
+                else
+
+                    TidalData.(phase).(obs)(k).v_e = [];
+
+                    TidalData.(phase).(obs)(k).v_n = [];
+
+                end
+
+            end
+
+        end
+
+    end
+
+end
+
+
+%% Histograms
+
+save_dir = ...
+    'C:\Users\bcm3620\OneDrive - UNC-Wilmington\THESIS\THESIS_DRAFTING\FIGURES';
+
+for p = 1:numel(phases)
+
+    phase = phases{p};
+
+    obs_names = fieldnames(TidalData.(phase));
+
+    V_all = [];
+
+    for i = 1:numel(obs_names)
+
+        obs = obs_names{i};
+
+        V = vertcat(TidalData.(phase).(obs).V);
+
+        V_all = [V_all; V];
+
+    end
+
+    Velocity.(phase) = V_all;
+
+end
+
+
+edges = 0:0.05:2.5;
+
+for p = 1:numel(phases)
+
+    phase = phases{p};
+
+    figure
+
+    histogram(Velocity.(phase),edges)
+
+    xlabel('Velocity (m/s)')
+    ylabel('Count')
+
+    title(sprintf( ...
+        '%s Tide - Temporal differencing window: %d s', ...
+        phase, ...
+        temporal_res));
+
+    xlim([0 2.5])
+
+    grid on
+
+
+%     exportgraphics( ...
+%         gcf, ...
+%         fullfile( ...
+%             save_dir, ...
+%             [phase '_Tide_' num2str(temporal_res) ...
+%             's_velocity_histogram.pdf']), ...
+%         'Resolution',300);
+
+%     exportgraphics( ...
+%         gcf, ...
+%         fullfile( ...
+%             save_dir, ...
+%             [phase '_Tide_' num2str(temporal_res) ...
+%             's_velocity_histogram.png']), ...
+%         'Resolution',300);
+% 
+%     savefig( ...
+%         gcf, ...
+%         fullfile( ...
+%             save_dir, ...
+%             [phase '_Tide_' num2str(temporal_res) ...
+%             's_velocity_histogram.fig']));
+
+end
+
+
+%% Scatter trajectories with velocities as color
+
+for p = 1:numel(phases)
+
+    phase = phases{p};
+
+    figure
+
+    gx = geoaxes;
+
+    hold(gx,'on')
+
+
+    % Observation periods that actually exist for this phase
+
+    obs_names = fieldnames(TidalData.(phase));
+
+
+    for i = 1:numel(obs_names)
+
+        obs = obs_names{i};
+
+
+        % Loop through individual drifters
+
+        for j = 1:numel(TidalData.(phase).(obs))
+
+            Lat = TidalData.(phase).(obs)(j).Lat;
+            Lon = TidalData.(phase).(obs)(j).Lon;
+            V   = TidalData.(phase).(obs)(j).V;
+
+
+            if isempty(Lat) || ...
+               isempty(Lon) || ...
+               isempty(V)
+
+                continue
+
+            end
+
+
+            geoscatter(gx,Lat,Lon,15,V,'filled')
+
+        end
+
+    end
+
+
+    geobasemap(gx,'satellite')
+
+    gx.CLim = [0 0.6];
+
+
+    cb = colorbar;
+
+    cb.Label.String = 'Velocity (m/s)';
+
+
+    title([phase ' Tide Drifter Velocities'])
+
+
+%     exportgraphics( ...
+%         gcf, ...
+%         fullfile( ...
+%             save_dir, ...
+%             [phase '_Tide_' num2str(temporal_res) ...
+%             's_velocity_geoscatter.png']), ...
+%         'Resolution',300);
+% 
+% 
+%     savefig( ...
+%         gcf, ...
+%         fullfile( ...
+%             save_dir, ...
+%             [phase '_Tide_' num2str(temporal_res) ...
+%             's_velocity_geoscatter.fig']));
+
+
+end
+
+
+%% REGION TRANSITION PROBABILITIES BY TIDAL PHASE
+
+% Load regions for plotting
+load('regions.mat')
+
+%% Plot regions
+
+figure
+
+gx = geoaxes;
+hold(gx,'on')
+
+for r = 1:numel(regions)
+
+    lat = regions(r).Lat;
+    lon = regions(r).Lon;
+
+    % Plot region boundary
+    geoplot(gx,lat,lon,'LineWidth',2)
+
+    % Label near region center
+    lat_center = mean(lat(1:end-1),'omitnan');
+    lon_center = mean(lon(1:end-1),'omitnan');
+
+    text(gx, ...
+        lat_center, ...
+        lon_center, ...
+        sprintf('%d',r), ...
+        'FontSize',14, ...
+        'Color','w', ...
+        'FontWeight','bold', ...
+        'HorizontalAlignment','center');
+
+end
+
+geobasemap(gx,'satellite')
+
+title('Yacht Basin Regions')
+
+%% 
+for p = 1:numel(phases)
+
+    phase = phases{p};
+
+
+    StartRegion = ...
+        RegionProb.(phase).StartRegion;
+
+    NextRegion = ...
+        RegionProb.(phase).NextRegion;
+
+
+    %% Skip phase if there are no transitions
+
+    if isempty(StartRegion)
+        continue
+    end
+
+
+    %% Number of regions
+
+    nRegions = max([StartRegion; NextRegion]);
+
+
+    %% Build transition count matrix
+
+    counts = zeros(nRegions,nRegions);
+
+
+    for k = 1:numel(StartRegion)
+
+        r1 = StartRegion(k);
+        r2 = NextRegion(k);
+
+        counts(r1,r2) = ...
+            counts(r1,r2) + 1;
+
+    end
+
+
+    %% Convert counts to probabilities
+
+    probability = zeros(size(counts));
+
+
+    for r = 1:nRegions
+
+        N = sum(counts(r,:));
+
+        if N > 0
+
+            probability(r,:) = ...
+                counts(r,:) ./ N;
+
+        end
+
+    end
+
+
+    %% Save
+
+    RegionProb.(phase).Counts = counts;
+
+    RegionProb.(phase).Probability = probability;
+
+end
+
+
+%% Add region transition results to TidalData
+
+TidalData.RegionProb = RegionProb;
+TidalData.TrajectoryTransitions = TrajectoryTransitions;
+
+%% PRINT REGION TRANSITION PROBABILITIES
+
+
+for p = 1:numel(phases)
+
+    phase = phases{p};
+
+    fprintf('\n');
+    fprintf('============================================\n');
+    fprintf('%s TIDE REGION TRANSITIONS\n', upper(phase));
+    fprintf('============================================\n');
+
+    P = TidalData.RegionProb.(phase).Probability;
+    C = TidalData.RegionProb.(phase).Counts;
+
+    for r = 1:size(P,1)
+
+        N = sum(C(r,:));
+
+        if N == 0
+            continue
+        end
+
+        fprintf('\nStarting Region %d  (N = %d transitions)\n', ...
+            r, N);
+
+        for dest = 1:size(P,2)
+
+            if C(r,dest) > 0
+
+                fprintf('   Region %d -> Region %d: %5.1f%%   (n = %d)\n', ...
+                    r, ...
+                    dest, ...
+                    P(r,dest)*100, ...
+                    C(r,dest));
+
+            end
+
+        end
+
+    end
+
+end
+
+%% Plot regional transition pathways for all tidal phases
+
+min_prob = 0.05;
+
+for p = 1:numel(phases)
+
+    phase = phases{p};
+
+    P = TidalData.RegionProb.(phase).Probability;
+
+    if isempty(P)
+        continue
+    end
+
+    figure
+
+    gx = geoaxes;
+    hold(gx,'on')
+    geobasemap(gx,'satellite')
+
+
+    %% Plot region polygons and labels
+
+    nRegions = numel(regions);
+
+    region_lat = nan(nRegions,1);
+    region_lon = nan(nRegions,1);
+
+    for r = 1:nRegions
+
+        lat = regions(r).Lat;
+        lon = regions(r).Lon;
+
+        geoplot(gx,lat,lon,'LineWidth',2)
+
+        region_lat(r) = mean(lat(1:end-1),'omitnan');
+        region_lon(r) = mean(lon(1:end-1),'omitnan');
+
+%         text(gx, ...
+%             region_lat(r), ...
+%             region_lon(r), ...
+%             sprintf('%d',r), ...
+%             'FontSize',12, ...
+%             'FontWeight','bold', ...
+%             'HorizontalAlignment','center', ...
+%             'BackgroundColor','w');
+
+    end
+
+
+    %% Draw directional pathways
+
+    for r1 = 1:size(P,1)
+
+        for r2 = 1:size(P,2)
+
+            if P(r1,r2) < min_prob || r1 == r2
+                continue
+            end
+
+            lat1 = region_lat(r1);
+            lon1 = region_lon(r1);
+
+            lat2 = region_lat(r2);
+            lon2 = region_lon(r2);
+
+            % Scale line width by probability
+            line_width = 0.5 + 2.5*P(r1,r2);
+
+            % Draw pathway line
+            hLine = geoplot(gx, ...
+                [lat1 lat2], ...
+                [lon1 lon2], ...
+                'LineWidth',line_width)
+            
+            % Get the pathway line color
+            path_color = hLine.Color;
+
+
+            % Direction marker at 75% along pathway
+            lat_mark = lat1 + 0.75*(lat2-lat1);
+            lon_mark = lon1 + 0.75*(lon2-lon1);
+
+            dlat = lat2 - lat1;
+            dlon = lon2 - lon1;
+
+            % Choose triangle direction
+            if abs(dlon) >= abs(dlat)
+                if dlon >= 0
+                    mk = '>';
+                else
+                    mk = '<';
+                end
+            else
+                if dlat >= 0
+                    mk = '^';
+                else
+                    mk = 'v';
+                end
+            end
+
+            % Scale marker size by probability
+            marker_size = 4 + 8*P(r1,r2);
+
+            geoplot(gx, ...
+                lat_mark, ...
+                lon_mark, ...
+                'LineStyle','none', ...
+                'Marker',mk, ...
+                'MarkerSize',marker_size, ...
+                'MarkerFaceColor',path_color, ...
+                'MarkerEdgeColor',path_color);
+
+        end
+
+    end
+
+
+    %% Title and save
+
+    title(sprintf('%s Tide Region Transition Pathways',phase))
+
+%     exportgraphics( ...
+%         gcf, ...
+%         fullfile( ...
+%             save_dir, ...
+%             [phase '_Tide_RegionTransitionPathways.png']), ...
+%         'Resolution',300);
+% 
+%     savefig( ...
+%         gcf, ...
+%         fullfile( ...
+%             save_dir, ...
+%             [phase '_Tide_RegionTransitionPathways.fig']));
+
+end
+
+end

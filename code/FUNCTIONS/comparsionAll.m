@@ -1,0 +1,517 @@
+function ALL = comparisonAll(cfg)
+
+%% Observation periods
+
+obsTags = { ...
+    'MarshMadness_NorthADCP'
+    'MarshMayhem_NorthADCP'
+    'FallFrolic_100825_NorthADCP'
+    'FallFrolic_101025_NorthADCP'
+%     'NovDep_NorthADCP'
+    'JuneJamboree_NorthADCP'};
+
+names = { ...
+    'MarshMadness'
+    'MarshMayhem'
+    'FallFrolic'
+    'FallFrolic'
+%     'NovDep'
+    'JuneJamboree'};
+
+
+%% Temporal-resolution Results files
+
+resultsFiles = { ...
+    'MarshMadness\PROCESSED_DATA\DRIFTERS\MarshMadness_TemporalRes_RMSE.mat'
+    'MarshMayhem\PROCESSED_DATA\DRIFTERS\MarshMayhem_TemporalRes_RMSE.mat'
+    'FallFrolic\PROCESSED_DATA\DRIFTERS\FallFrolic_100825_TemporalRes_RMSE.mat'
+    'FallFrolic\PROCESSED_DATA\DRIFTERS\FallFrolic_101025_TemporalRes_RMSE.mat'
+%     'NovDep\PROCESSED_DATA\DRIFTERS\NovDep_TemporalRes_RMSE.mat'
+    'JuneJamboree\PROCESSED_DATA\DRIFTERS\JuneJamboree_TemporalRes_RMSE.mat'};
+
+
+%% Projection and ADCP location
+
+proj = projcrs(32119);
+
+I_loc = [34.05673145 -77.88949171];
+
+[E_loc,N_loc] = projfwd( ...
+    proj, ...
+    I_loc(1), ...
+    I_loc(2));
+
+thresh = 50;   % ROI radius, meters
+
+
+%% Temporal resolutions
+
+res_sec = [1 2 4 8 16 32 64 128 256];
+
+
+%% Preallocate RMSE arrays
+
+RMSE_ADCP = nan(size(res_sec));
+
+RMSE_EXTRAP = nan(size(res_sec));
+
+RMSE_EOF = nan(size(res_sec));
+
+
+%% Preallocate bias arrays
+
+Bias_ADCP = nan(size(res_sec));
+
+Bias_EXTRAP = nan(size(res_sec));
+
+Bias_EOF = nan(size(res_sec));
+
+
+%% Number of observations used
+
+N_ADCP = nan(size(res_sec));
+
+N_EXTRAP = nan(size(res_sec));
+
+N_EOF = nan(size(res_sec));
+
+
+%% ============================================================
+% Loop through temporal resolutions
+% =============================================================
+
+for r = 1:length(res_sec)
+
+    resolution = res_sec(r);
+
+    fprintf('\n===================================\n');
+    fprintf('Processing %d second resolution\n',resolution);
+    fprintf('===================================\n');
+
+
+    %% Initialize combined arrays for this resolution
+
+    drifter_V = [];
+
+    ADCP_V = [];
+
+    EXTRAP_V = [];
+
+    EOF_V = [];
+
+
+    %% ========================================================
+    % Loop through observation periods
+    % =========================================================
+
+    for n = 1:numel(obsTags)
+
+        obsTag = obsTags{n};
+
+        name = names{n};
+
+
+        fprintf('Loading %s\n',obsTag);
+
+
+        %% ----------------------------------------------------
+        % Load temporal-resolution drifter data
+        % -----------------------------------------------------
+
+        D = load(fullfile( ...
+            cfg.root_data, ...
+            resultsFiles{n}));
+
+        Results = D.Results;
+
+
+        %% ----------------------------------------------------
+        % Load ADCP comparison structures
+        % -----------------------------------------------------
+
+        A = load(fullfile( ...
+            cfg.root_data, ...
+            [name '\PROCESSED_DATA\COMP\' ...
+            obsTag '_ROI_ADCP.mat']));
+
+
+        E = load(fullfile( ...
+            cfg.root_data, ...
+            [name '\PROCESSED_DATA\COMP\' ...
+            obsTag '_ROI_EXTRAP.mat']));
+
+
+        F = load(fullfile( ...
+            cfg.root_data, ...
+            [name '\PROCESSED_DATA\COMP\' ...
+            obsTag '_ROI_EOF.mat']));
+
+
+        ROI_ADCP = A.ROI_ADCP;
+
+        ROI_EXTRAP = E.ROI_EXTRAP;
+
+        ROI_EOF = F.ROI_EOF;
+
+
+        %% ----------------------------------------------------
+        % Size of drifter data
+        % -----------------------------------------------------
+
+        [numDeployments,numDrifters] = size(Results);
+
+
+        %% ====================================================
+        % Loop through deployments and drifters
+        % =====================================================
+
+        for j = 1:numDeployments
+
+            for i = 1:numDrifters
+
+                %% Skip empty drifters
+
+                if isempty(Results(j,i).ID)
+                    continue
+                end
+
+
+                %% Make sure corresponding ROI structure exists
+
+                if j > size(ROI_ADCP,1) || ...
+                   i > size(ROI_ADCP,2)
+
+                    continue
+                end
+
+
+                %% Skip drifters that never entered ADCP ROI
+
+                if isempty(ROI_ADCP(j,i).avg_V)
+                    continue
+                end
+
+
+                %% ============================================
+                % 1 SECOND POSITION-DERIVED VELOCITY
+                % =============================================
+
+                if resolution == 1
+
+                    %% Find ROI using original 1 Hz positions
+
+                    dist = hypot( ...
+                        Results(j,i).Easting - E_loc, ...
+                        Results(j,i).Northing - N_loc);
+
+
+                    ROI_idx = dist <= thresh;
+
+
+                    if ~any(ROI_idx)
+                        continue
+                    end
+
+
+                    %% Average 1 Hz position-derived velocity
+
+                    V = mean( ...
+                        Results(j,i).V_1Hz(ROI_idx), ...
+                        'omitnan');
+
+
+                %% ============================================
+                % 2 - 256 SECOND POSITION-DERIVED VELOCITIES
+                % =============================================
+
+                else
+
+                    %% Find desired temporal resolution
+
+                    seconds = ...
+                        [Results(j,i).TemporalRes.Seconds];
+
+
+                    idx = find( ...
+                        seconds == resolution, ...
+                        1);
+
+
+                    if isempty(idx)
+                        continue
+                    end
+
+
+                    TR = Results(j,i).TemporalRes(idx);
+
+
+                    %% Find ROI
+
+                    dist = hypot( ...
+                        TR.Easting - E_loc, ...
+                        TR.Northing - N_loc);
+
+
+                    ROI_idx = dist <= thresh;
+
+
+                    if ~any(ROI_idx)
+                        continue
+                    end
+
+
+                    %% Average position-derived velocity
+
+                    V = mean( ...
+                        TR.V(ROI_idx), ...
+                        'omitnan');
+
+                end
+
+
+                %% ============================================
+                % Store drifter velocity
+                % =============================================
+
+                drifter_V(end+1,1) = V;
+
+
+                %% ============================================
+                % Store corresponding ADCP velocities
+                % =============================================
+
+                ADCP_V(end+1,1) = ...
+                    ROI_ADCP(j,i).V_topbin;
+
+
+                EXTRAP_V(end+1,1) = ...
+                    ROI_EXTRAP(j,i).V_topbin;
+
+
+                EOF_V(end+1,1) = ...
+                    ROI_EOF(j,i).V_topbin;
+
+            end
+
+        end
+
+    end
+
+
+    %% ========================================================
+    % RMSE
+    % =========================================================
+
+    RMSE_ADCP(r) = ...
+        rms(drifter_V - ADCP_V,'omitnan');
+
+
+    RMSE_EXTRAP(r) = ...
+        rms(drifter_V - EXTRAP_V,'omitnan');
+
+
+    RMSE_EOF(r) = ...
+        rms(drifter_V - EOF_V,'omitnan');
+
+
+    %% ========================================================
+    % Bias
+    %
+    % Positive = drifter greater than ADCP
+    % Negative = drifter less than ADCP
+    % =========================================================
+
+    Bias_ADCP(r) = ...
+        mean(drifter_V - ADCP_V,'omitnan');
+
+
+    Bias_EXTRAP(r) = ...
+        mean(drifter_V - EXTRAP_V,'omitnan');
+
+
+    Bias_EOF(r) = ...
+        mean(drifter_V - EOF_V,'omitnan');
+
+
+    %% ========================================================
+    % Number of valid comparisons
+    % =========================================================
+
+    N_ADCP(r) = ...
+        sum(~isnan(drifter_V - ADCP_V));
+
+
+    N_EXTRAP(r) = ...
+        sum(~isnan(drifter_V - EXTRAP_V));
+
+
+    N_EOF(r) = ...
+        sum(~isnan(drifter_V - EOF_V));
+
+
+    %% ========================================================
+    % Store actual comparison data
+    % =========================================================
+
+    ALL.Resolution(r).Seconds = resolution;
+
+    ALL.Resolution(r).Drifter_V = drifter_V;
+
+    ALL.Resolution(r).ADCP_V = ADCP_V;
+
+    ALL.Resolution(r).EXTRAP_V = EXTRAP_V;
+
+    ALL.Resolution(r).EOF_V = EOF_V;
+
+end
+
+
+%% ============================================================
+% Store RMSE
+% =============================================================
+
+ALL.RMSE.ADCP = RMSE_ADCP;
+
+ALL.RMSE.EXTRAP = RMSE_EXTRAP;
+
+ALL.RMSE.EOF = RMSE_EOF;
+
+
+%% ============================================================
+% Store Bias
+% =============================================================
+
+ALL.Bias.ADCP = Bias_ADCP;
+
+ALL.Bias.EXTRAP = Bias_EXTRAP;
+
+ALL.Bias.EOF = Bias_EOF;
+
+
+%% ============================================================
+% RMSE table
+% =============================================================
+
+RMSE_Table = table( ...
+    res_sec', ...
+    RMSE_ADCP', ...
+    RMSE_EXTRAP', ...
+    RMSE_EOF', ...
+    'VariableNames', ...
+    {'Seconds','ADCP','EXTRAP','EOF'});
+
+
+disp(' ')
+disp('RMSE BY TEMPORAL RESOLUTION')
+disp(RMSE_Table)
+
+
+ALL.RMSE_Table = RMSE_Table;
+
+
+%% ============================================================
+% Bias table
+% =============================================================
+
+Bias_Table = table( ...
+    res_sec', ...
+    Bias_ADCP', ...
+    Bias_EXTRAP', ...
+    Bias_EOF', ...
+    'VariableNames', ...
+    {'Seconds','ADCP','EXTRAP','EOF'});
+
+
+disp(' ')
+disp('BIAS BY TEMPORAL RESOLUTION')
+disp(Bias_Table)
+
+
+ALL.Bias_Table = Bias_Table;
+
+%% ============================================================
+% Plot RMSE versus temporal resolution
+% =============================================================
+
+figure
+
+semilogx( ...
+    res_sec, ...
+    RMSE_ADCP, ...
+    '-o', ...
+    'LineWidth',1.5)
+
+hold on
+
+semilogx( ...
+    res_sec, ...
+    RMSE_EXTRAP, ...
+    '-s', ...
+    'LineWidth',1.5)
+
+semilogx( ...
+    res_sec, ...
+    RMSE_EOF, ...
+    '-^', ...
+    'LineWidth',1.5)
+
+grid on
+
+xlabel('Differencing Interval (s)')
+
+ylabel('RMSE (m/s)')
+
+legend( ...
+    'ADCP', ...
+    'EXTRAP', ...
+    'EOF', ...
+    'Location','best')
+
+title('Position-Derived Velocity RMSE vs Temporal Resolution')
+
+
+%% ============================================================
+% Plot Bias versus temporal resolution
+% =============================================================
+
+figure
+
+semilogx( ...
+    res_sec, ...
+    Bias_ADCP, ...
+    '-o', ...
+    'LineWidth',1.5)
+
+hold on
+
+semilogx( ...
+    res_sec, ...
+    Bias_EXTRAP, ...
+    '-s', ...
+    'LineWidth',1.5)
+
+semilogx( ...
+    res_sec, ...
+    Bias_EOF, ...
+    '-^', ...
+    'LineWidth',1.5)
+
+
+yline(0,'k--')
+
+
+grid on
+
+xlabel('Differencing Interval (s)')
+
+ylabel('Bias: Drifter - ADCP (m/s)')
+
+legend( ...
+    'ADCP', ...
+    'EXTRAP', ...
+    'EOF', ...
+    'Location','best')
+
+title('Position-Derived Velocity Bias vs Temporal Resolution')
+
+end

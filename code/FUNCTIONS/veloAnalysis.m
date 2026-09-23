@@ -1,0 +1,490 @@
+function Results = veloAnalysis(cfg)
+
+    %% Load drifter data
+
+    drifter_filename = fullfile( ...
+        cfg.out.drifters_data, ...
+        [cfg.name '_drifters_level_2.mat']);
+
+    S = load(drifter_filename);
+
+    if isfield(S,'drifters_level_2')
+
+        drifters_level_2 = S.drifters_level_2;
+
+    elseif isfield(S,'trimmed')
+
+        drifters_level_2 = S.trimmed;
+
+    else
+
+        error('File does not contain drifters_level_2 or trimmed')
+
+    end
+
+
+    %% Temporal resolution settings
+
+    res_sec = [2 4 8 16 32 64 128 256];
+
+    max_halfLag = max(res_sec)/2;
+
+    [nDeployments,nDrifters] = size(drifters_level_2);
+
+
+    %% Preallocate output structure
+
+    Results = struct( ...
+        'ID', [], ...
+        'Resolution_sec', [], ...
+        'RMSE', [], ...
+        'RMSE_v_Speed', [], ...
+        'TemporalRes', [], ...
+        'Time', [], ...
+        'V_1Hz', [], ...
+        'Speed', [], ...
+        'Tidal_Phase', [], ...
+        'Region', []);
+
+    Results = repmat(Results,nDeployments,nDrifters);
+
+
+    %% Loop through deployments and drifters
+
+    for d = 1:nDeployments
+
+        for i = 1:nDrifters
+
+            D = drifters_level_2(d,i);
+
+
+            %% Skip empty deployment/drifter combinations
+
+            if isempty(D.e_time) || ...
+               isempty(D.East) || ...
+               isempty(D.North)
+
+                continue
+
+            end
+
+
+            %% Determine drifter ID
+
+            if isfield(D,'ID') && ~isempty(D.ID)
+
+                drifterID = D.ID;
+
+            else
+
+                drifterID = i;
+
+            end
+
+
+            %% Extract 1 Hz data
+
+            time_1hz = D.e_time;
+
+            Speed = D.Speed;
+
+            % Convert GPS Doppler speed from knots to m/s
+            Speed = Speed * 0.51444;
+
+            Easting  = D.East;
+            Northing = D.North;
+            Lat      = D.Lat;
+            Lon      = D.Lon;
+            TideP    = D.TidePhase;
+            Regions   = D.Regions;
+            V        = D.V;
+
+
+            %% Make everything column vectors
+
+            time_1hz = time_1hz(:);
+            Speed    = Speed(:);
+            Easting  = Easting(:);
+            Northing = Northing(:);
+            V        = V(:);
+
+
+            %% Check trajectory length
+
+            if length(time_1hz) <= 2*max_halfLag
+
+                fprintf( ...
+                    'Skipping Deployment %d | Drifter %d: trajectory too short\n', ...
+                    d,drifterID);
+
+                continue
+
+            end
+
+
+            %% Common center indices for ALL resolutions
+
+            idx_center = ...
+                (1 + max_halfLag): ...
+                (length(time_1hz) - max_halfLag);
+
+
+            time_1hz_centered = time_1hz(idx_center);
+
+            Speed_centered = Speed(idx_center);
+
+            V_centered = V(idx_center);
+
+            Easting_centered = Easting(idx_center);
+
+            Northing_centered = Northing(idx_center);
+            
+            Lat_centered = Lat(idx_center);
+            
+            Lon_centered = Lon(idx_center);
+            
+            tidalPhase_centered = TideP(idx_center);
+            
+            Regions_centered = Regions(idx_center);
+
+
+            %% Calculate temporal-resolution velocities
+
+            TemporalRes = struct([]);
+
+            for r = 1:length(res_sec)
+
+                lag = res_sec(r);
+
+                halfLag = lag/2;
+
+
+                % Indices on either side of center point
+                idx_before = idx_center - halfLag;
+
+                idx_after = idx_center + halfLag;
+
+
+                % Change across full time window
+                delta_time = ...
+                    time_1hz(idx_after) - ...
+                    time_1hz(idx_before);
+
+                delta_east = ...
+                    Easting(idx_after) - ...
+                    Easting(idx_before);
+
+                delta_north = ...
+                    Northing(idx_after) - ...
+                    Northing(idx_before);
+
+
+                % Velocity components
+                new_V_e = delta_east ./ delta_time;
+
+                new_V_n = delta_north ./ delta_time;
+
+
+                % Position Derived Velocity magnitude
+                new_V = sqrt( ...
+                    new_V_e.^2 + ...
+                    new_V_n.^2 );
+                
+                % Smooth Doppler Speed over same temporal resolution
+                
+                Speed_smoothed = movmean( ... 
+                    Speed, ...
+                    lag, ...
+                    'omitnan');
+                Speed_smoothed_centered = ...
+                    Speed_smoothed(idx_center);
+
+
+                %% Store temporal-resolution data
+
+                TemporalRes(r).Seconds = lag;
+
+                TemporalRes(r).Time = ...
+                    time_1hz_centered;
+                
+                TemporalRes(r).Lat = ...
+                    Lat_centered;
+                
+                TemporalRes(r).Lon = ...
+                    Lon_centered;
+
+                TemporalRes(r).Easting = ...
+                    Easting_centered;
+
+                TemporalRes(r).Northing = ...
+                    Northing_centered;
+
+                TemporalRes(r).V_e = ...
+                    new_V_e;
+
+                TemporalRes(r).V_n = ...
+                    new_V_n;
+
+                TemporalRes(r).V = ...
+                    new_V;
+               
+                TemporalRes(r).Speed = ...
+                    Speed_smoothed_centered;
+                
+                TemporalRes(r).TidePhase = ...
+                    tidalPhase_centered;
+                
+                TemporalRes(r).Region = ...
+                    Regions_centered;
+
+            end
+
+
+            %% Calculate RMSE relative to maximum temporal resolution
+
+            idx_maxres = ...
+                find([TemporalRes.Seconds] == max(res_sec),1);
+
+            V_maxres = ...
+                TemporalRes(idx_maxres).V;
+
+
+            % 1 Hz vs maximum temporal resolution
+            RMSE_1s = sqrt(mean( ...
+                (V_centered - V_maxres).^2, ...
+                'omitnan'));
+
+
+            % 1 Hz vs GPS Doppler speed
+            RMSE_1s_Speed = sqrt(mean( ...
+                (V_centered - Speed_centered).^2, ...
+                'omitnan'));
+
+
+            %% Preallocate RMSE arrays
+
+            RMSE_res = nan(size(res_sec));
+
+            RMSE_Speed = nan(size(res_sec));
+            
+            RMSE_Speed_Smoothed = nan(size(res_sec));
+
+
+            %% RMSE for every temporal resolution
+
+            for r = 1:length(res_sec)
+
+                % Position-derived velocity vs max temporal resolution
+                RMSE_res(r) = sqrt(mean( ...
+                    (TemporalRes(r).V - V_maxres).^2, ...
+                    'omitnan'));
+
+
+                % Position-derived velocity vs Doppler speed
+                RMSE_Speed(r) = sqrt(mean( ...
+                    (TemporalRes(r).V - Speed_centered).^2, ...
+                    'omitnan'));
+                
+                % Position-derived velocity vs Doppler speed
+                RMSE_Speed_Smoothed(r) = sqrt(mean( ...
+                    (TemporalRes(r).V - TemporalRes(r).Speed).^2, ...
+                    'omitnan'));
+
+            end
+
+
+            %% Store everything for this trajectory
+
+            Results(d,i).ID = drifterID;
+
+            Results(d,i).Resolution_sec = ...
+                [1 res_sec];
+
+            Results(d,i).RMSE = ...
+                [RMSE_1s RMSE_res];
+
+            Results(d,i).RMSE_v_Speed = ...
+                [RMSE_1s_Speed RMSE_Speed];
+            
+            Results(d,i).RMSE_v_Speed_Smoothed = ...
+                [RMSE_1s_Speed RMSE_Speed_Smoothed];
+
+            Results(d,i).TemporalRes = ...
+                TemporalRes;
+
+            Results(d,i).Time = ...
+                time_1hz_centered;
+            
+            Results(d,i).Lat = ...
+                Lat_centered;
+            
+            Results(d,i).Lon = ...
+                Lon_centered;
+
+            Results(d,i).V_1Hz = ...
+                V_centered;
+
+            Results(d,i).Speed = ...
+                Speed_centered;
+            
+            Results(d,i).Easting = ...
+                Easting_centered;
+            
+            Results(d,i).Northing = ...
+                Northing_centered;
+            
+            Results(d,i).TidePhase = ...
+                tidalPhase_centered;
+            
+            Results(d,i).Region = ...
+                Regions_centered;
+            
+
+
+        end
+
+    end
+
+
+    %% RMSE convergence across all trajectories
+
+    valid = ~arrayfun( ...
+        @(x) isempty(x.RMSE), ...
+        Results);
+
+
+    allRMSE = ...
+        vertcat(Results(valid).RMSE);
+
+    meanRMSE = ...
+        mean(allRMSE,1,'omitnan');
+
+
+    allRMSE_dopp = ...
+        vertcat(Results(valid).RMSE_v_Speed);
+
+    meanRMSE_dopp = ...
+        mean(allRMSE_dopp,1,'omitnan');
+    
+    allRMSE_dopp_smoothed = ...
+        vertcat(Results(valid).RMSE_v_Speed_Smoothed);
+
+    meanRMSE_dopp_smoothed = ...
+        mean(allRMSE_dopp_smoothed,1,'omitnan');
+
+
+    Resolutions = [1 res_sec];
+
+
+    %% Plot all trajectory RMSEs
+
+    figure
+    hold on
+
+
+    for k = 1:numel(Results)
+
+        if isempty(Results(k).RMSE)
+
+            continue
+
+        end
+
+
+        % RMSE relative to max temporal resolution
+        scatter( ...
+            Results(k).Resolution_sec, ...
+            Results(k).RMSE, ...
+            20, ...
+            'b', ...
+            'filled', ...
+            'HandleVisibility','off');
+
+
+        % RMSE relative to Doppler speed
+        scatter( ...
+            Results(k).Resolution_sec, ...
+            Results(k).RMSE_v_Speed, ...
+            20, ...
+            'r', ...
+            'filled', ...
+            'HandleVisibility','off');
+        
+        % RMSE relative to Smoothed Doppler speed
+        scatter( ...
+            Results(k).Resolution_sec, ...
+            Results(k).RMSE_v_Speed_Smoothed, ...
+            20, ...
+            'g', ...
+            'filled', ...
+            'HandleVisibility','off');
+
+    end
+
+
+    %% Plot mean RMSE curves
+
+    h1 = scatter( ...
+        nan,nan, ...
+        20, ...
+        'b', ...
+        'filled');
+
+    h2 = scatter( ...
+        nan,nan, ...
+        20, ...
+        'r', ...
+        'filled');
+    
+    h3 = scatter( ...
+        nan,nan, ...
+        20, ...
+        'g', ...
+        'filled');
+
+
+    h4 = plot( ...
+        Resolutions, ...
+        meanRMSE, ...
+        'b-', ...
+        'LineWidth',2);
+
+
+    h5 = plot( ...
+        Resolutions, ...
+        meanRMSE_dopp, ...
+        'r-', ...
+        'LineWidth',2);
+    
+    h6 = plot( ...
+        Resolutions, ...
+        meanRMSE_dopp_smoothed, ...
+        'g-', ...
+        'LineWidth',2);
+
+
+    xlabel('Temporal Resolution (s)')
+
+    ylabel('RMSE (m/s)')
+
+
+    legend( ...
+        [h1 h2 h3 h4 h5 h6], ...
+        'RMSE vs Max Lag', ...
+        'RMSE vs Doppler Speed', ...
+        'RMSE vs Smoothed Doppler Speed', ...
+        'Mean RMSE vs Max Lag', ...
+        'Mean RMSE vs Doppler Speed', ...
+        'Mean RMSE vs Smoothed Doppler Speed', ...
+        'Location','best')
+
+
+    title(sprintf( ...
+        'RMSE Across All Trajectories - %s', ...
+        cfg.name))
+
+
+    grid on
+
+
+end

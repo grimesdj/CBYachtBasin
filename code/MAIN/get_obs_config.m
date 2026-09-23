@@ -8,6 +8,9 @@ cfg.root_data = [root_data, 'CB_YachtBasin\'];
 % cfg.obsTag = strrep(obsPeriod,' ','_');
 cfg.obsTag = [strrep(obsPeriod,' ','_') '_' adcpLoc];
 
+% Processing flags
+cfg.run_drifter_level_1 = ~contains(obsPeriod,'SHEET');
+
 
 
 
@@ -73,7 +76,7 @@ switch [obsPeriod, adcpLoc]
         
     case { ['FallFrolic 100825', 'NorthADCP'] }
         
-        cfg.name = 'FallFrolic';
+        cfg.name = 'FallFrolic_100825';
         % cfg.main_dir = ('C:\Users\bcm3620\OneDrive - UNC-Wilmington\THESIS\Fall_Frolic\');
         
         cfg.root_data = [cfg.root_data, 'FallFrolic\'];
@@ -87,7 +90,7 @@ switch [obsPeriod, adcpLoc]
         
     case { ['FallFrolic 100825', 'SouthADCP'] }
         
-        cfg.name = 'FallFrolic';
+        cfg.name = 'FallFrolic_100825';
         % cfg.main_dir = ('C:\Users\bcm3620\OneDrive - UNC-Wilmington\THESIS\Fall_Frolic\');
         
         cfg.root_data = [cfg.root_data, 'FallFrolic\'];
@@ -99,9 +102,37 @@ switch [obsPeriod, adcpLoc]
         cfg.adcp_input_dir = [cfg.root_data, 'AQD2710\'];
         cfg.adcp_input_file = 'CB_S301';
         
+        case { ['FallFrolic 100825 SHEET', 'NorthADCP'] }
+        
+        cfg.name = 'FallFrolic_100825_sheet';
+        % cfg.main_dir = ('C:\Users\bcm3620\OneDrive - UNC-Wilmington\THESIS\Fall_Frolic\');
+        
+        cfg.root_data = [cfg.root_data, 'FallFrolic\'];
+        
+        cfg.drifters_raw_dir = [cfg.root_data ,'Archived_Sheet_Data\RAW'];
+        cfg.drifters_dep_times = [cfg.root_data ,'FallFrolic\DRIFTERS\DATA\Deployment_100825\Dep_times\Dep_03_times.xlsx'];
+        
+        
+        cfg.adcp_input_dir = [cfg.root_data, 'AQD5459\'];
+        cfg.adcp_input_file = 'CB_N301';
+        
+    case { ['FallFrolic 100825 SHEET', 'SouthADCP'] }
+        
+        cfg.name = 'FallFrolic_100825_sheet';
+        % cfg.main_dir = ('C:\Users\bcm3620\OneDrive - UNC-Wilmington\THESIS\Fall_Frolic\');
+        
+        cfg.root_data = [cfg.root_data, 'FallFrolic\'];
+        
+        cfg.drifters_raw_dir = [cfg.root_data ,'Archived_Sheet_Data\RAW'];
+        cfg.drifters_dep_times = [cfg.root_data ,'FallFrolic\DRIFTERS\DATA\Deployment_100825\Dep_times\Dep_03_times.xlsx'];
+        
+        
+        cfg.adcp_input_dir = [cfg.root_data, 'AQD2710\'];
+        cfg.adcp_input_file = 'CB_S301';
+        
     case { ['FallFrolic 101025', 'NorthADCP'] }
         
-        cfg.name = 'FallFrolic';
+        cfg.name = 'FallFrolic_101025';
         % cfg.main_dir = ('C:\Users\bcm3620\OneDrive - UNC-Wilmington\THESIS\Fall_Frolic\');
         
         cfg.root_data = [cfg.root_data, 'FallFrolic\'];
@@ -115,13 +146,41 @@ switch [obsPeriod, adcpLoc]
         
      case { ['FallFrolic 101025', 'SouthADCP'] }
         
-        cfg.name = 'FallFrolic';
+        cfg.name = 'FallFrolic_101025';
         % cfg.main_dir = ('C:\Users\bcm3620\OneDrive - UNC-Wilmington\THESIS\Fall_Frolic\');
         
         cfg.root_data = [cfg.root_data, 'FallFrolic\'];
         
         cfg.drifters_raw_dir = [cfg.root_data ,'DRIFTERS\DATA\Deployment_101025\RAW'];
         cfg.drifters_dep_times = [cfg.root_data ,'DRIFTERS\DATA\Deployment_101025\Dep_times\Dep_04_times.xlsx'];
+        
+        
+        cfg.adcp_input_dir = [cfg.root_data, 'AQD2710\'];
+        cfg.adcp_input_file = 'CB_S301';
+        
+        case { ['FallFrolic 101025 SHEET', 'NorthADCP'] }
+        
+        cfg.name = 'FallFrolic_101025_sheet';
+        % cfg.main_dir = ('C:\Users\bcm3620\OneDrive - UNC-Wilmington\THESIS\Fall_Frolic\');
+        
+        cfg.root_data = [cfg.root_data, 'FallFrolic\'];
+        
+        cfg.drifters_raw_dir = [cfg.root_data ,'Archived_Sheet_Data\RAW'];
+        cfg.drifters_dep_times = [cfg.root_data ,'FallFrolic\DRIFTERS\DATA\Deployment_101025\Dep_times\Dep_04_times.xlsx'];
+        
+        
+        cfg.adcp_input_dir = [cfg.root_data, 'AQD5459\'];
+        cfg.adcp_input_file = 'CB_N301';
+        
+     case { ['FallFrolic 101025 SHEET', 'SouthADCP'] }
+        
+        cfg.name = 'FallFrolic_101025_sheet';
+        % cfg.main_dir = ('C:\Users\bcm3620\OneDrive - UNC-Wilmington\THESIS\Fall_Frolic\');
+        
+        cfg.root_data = [cfg.root_data, 'FallFrolic\'];
+        
+        cfg.drifters_raw_dir = [cfg.root_data ,'Archived_Sheet_Data\RAW'];
+        cfg.drifters_dep_times = [cfg.root_data ,'FallFrolic\DRIFTERS\DATA\Deployment_101025\Dep_times\Dep_04_times.xlsx'];
         
         
         cfg.adcp_input_dir = [cfg.root_data, 'AQD2710\'];
@@ -138,7 +197,78 @@ switch [obsPeriod, adcpLoc]
         
         
         cfg.adcp_input_dir = [cfg.root_data, 'AQD5459\'];
-        cfg.adcp_input_file = 'CB_N401_01';        
+        cfg.adcp_input_file = 'CB_N401_01';    
+        
+    case { ['JuneJamboree', 'NorthADCP'] }
+        
+        cfg.name = 'JuneJamboree';
+        
+        cfg.root_data = [cfg.root_data, 'JuneJamboree\'];
+        
+        cfg.drifters_raw_dir = [cfg.root_data ,'DRIFTERS\DATA\Deployment_061426\RAW'];
+%        cfg.drifters_dep_times = [cfg.root_data ,'DRIFTERS\DATA\Deployment_061426\Dep_times\Dep_06_times.xlsx'];
+        cfg.drifters_dep_times = [cfg.root_data ,'DRIFTERS\DATA\Deployment_061426\Dep_times\Dep_06_times_01.xlsx'];
+        
+        
+        cfg.adcp_input_dir = [cfg.root_data, 'AQD5459\'];
+        cfg.adcp_input_file = 'CB_N502'; 
+        
+     case { ['JuneJamboree', 'SouthADCP'] }
+        
+        cfg.name = 'JuneJamboree';
+        
+        cfg.root_data = [cfg.root_data, 'JuneJamboree\'];
+        
+        cfg.drifters_raw_dir = [cfg.root_data ,'DRIFTERS\DATA\Deployment_061426\RAW'];
+%        cfg.drifters_dep_times = [cfg.root_data ,'DRIFTERS\DATA\Deployment_061426\Dep_times\Dep_06_times.xlsx'];
+        cfg.drifters_dep_times = [cfg.root_data ,'DRIFTERS\DATA\Deployment_061426\Dep_times\Dep_06_times_01.xlsx'];
+        
+        
+        cfg.adcp_input_dir = [cfg.root_data, 'AQD2710\'];
+        cfg.adcp_input_file = 'CB_S501'; 
+
+     case { ['SummerFlood', 'NorthADCP'] }
+        
+        cfg.name = 'SummerFlood';
+        
+        cfg.root_data = [cfg.root_data, 'SummerFlood\'];
+        
+        cfg.drifters_raw_dir = [cfg.root_data ,'DRIFTERS\DATA\Deployment_081126\RAW'];
+
+        cfg.drifters_dep_times = [cfg.root_data ,'DRIFTERS\DATA\Deployment_081126\Dep_times\Dep_07_times_01.xlsx'];        
+        
+        cfg.adcp_input_dir = [cfg.root_data, 'AQD3263\'];
+        cfg.adcp_input_file = 'CB_N601'; 
+        
+     case { ['SummerFlood', 'SouthADCP'] }
+        
+        cfg.name = 'SummerFlood';
+        
+        cfg.root_data = [cfg.root_data, 'SummerFlood\'];
+        
+        cfg.drifters_raw_dir = [cfg.root_data ,'DRIFTERS\DATA\Deployment_081125\RAW'];
+%        cfg.drifters_dep_times = [cfg.root_data ,'DRIFTERS\DATA\Deployment_061426\Dep_times\Dep_06_times.xlsx'];
+        cfg.drifters_dep_times = [cfg.root_data ,'DRIFTERS\DATA\Deployment_061426\Dep_times\Dep_07_times.xlsx'];
+        
+        
+        cfg.adcp_input_dir = [cfg.root_data, 'AQD2710\'];
+        cfg.adcp_input_file = 'CB_S601'; 
+        
+        case { ['ALL', 'NorthADCP'] }
+        
+        cfg.name = 'ALL_OBS_PERIODS';
+        
+        cfg.root_data = [cfg.root_data];
+        
+        
+        case { ['ALL', 'SouthADCP'] }
+        
+        cfg.name = 'ALL_OBS_PERIODS';
+        
+        cfg.root_data = [cfg.root_data];
+        
+        
+        
         
 
         
