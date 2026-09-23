@@ -47,6 +47,18 @@ Third print = 176 mL resin (Tough 2000 is $209/L)
 --The material cost is: $37 per drifter ($40/drifter * 20 drifters = $800)
 
 
+## Estimating 3D printer costs:
+CMS costs: 
+Purchase price: $16,000
+Maintainance: 	$12,000    --> $300/90-days  
+Life-span: 	~500k mL resin --> ~10 years at 2-days per week and 500mL/day 
+Electricity: 	1Wh/mL * 0.00125 $/Wh = 0.00125 $/mL
+Labor:		$10/200mL = $0.05/mL --> (1/2 hr / 100mL)
+
+Resin (Tough2000 $209/L): $0.209/mL
+
+Cost/mL estimate: (16000+12000)/500000 + 0.00125 + 0.05 + 0.209 = 0.32
+
 
 %% VA, COOP
 Rob Heitsenrether
