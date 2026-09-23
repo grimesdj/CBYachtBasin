@@ -1,0 +1,8 @@
+ID, SN, Type, Ancillary Info
+N , AQD5459, AQD, UNCW-2MHz
+N , ???? , RBR_D, NCSU solo-D
+N , 210866 , RBR_CTD, UNCW-CTD (attached to ADCP)
+N , 242452 , RBR_CTD, UNCW-CTD (attached to mooring line)
+S , AQD2710,AQD,  UNCW-BIO-2MHz
+S , ???? , RBR_D, NCSU solo-D
+S , 210864 , RBR_CTD, UNCW-CTD

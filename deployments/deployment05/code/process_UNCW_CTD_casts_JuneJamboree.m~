@@ -1,0 +1,7 @@
+clear all
+close all
+%% RBR-CTD+F:
+rbrFile = '~/OneDriveUNCW/DATA/CB_YachtBasin/JuneJamboree/RBR/230442_20260615_1343.rsk';
+%% Locsys GT-31 GPS:
+gpsFile = '~/OneDriveUNCW/DATA/CB_YachtBasin/JuneJamboree/GPS/GPSUSER05_133200472_20260614_110619.TXT';
+
