@@ -1,4 +1,6 @@
-function [adcp_level_2] = adcp_post_processing(adcp_level_1, cfg);
+function [adcp_level_2] = adcp_post_processing(cfg);
+filename = fullfile(cfg.out.adcp_data, [cfg.obsTag '_adcp_level_1.mat']);
+load(filename);
 
 %% Extract data from structure
 

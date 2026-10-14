@@ -1,0 +1,406 @@
+function [TidalPhase, drifters_level_2] = findTidalPhaseandRegion(cfg)
+
+adcp_filename = fullfile(cfg.out.adcp_data, [cfg.obsTag '_adcp_level_1.mat']);
+drifter_filename = fullfile(cfg.out.drifters_data, [cfg.name '_drifters_level_1.mat']);
+% drifter_filename = fullfile(cfg.out.drifters_data, [cfg.name '_TemporalRes_RMSE.mat']);
+
+load(adcp_filename);
+load(drifter_filename);
+
+S = load(drifter_filename);
+
+if isfield(S,'drifters_level_1')
+    drifters_level_1 = S.drifters_level_1;
+
+elseif isfield(S,'trimmed')
+    drifters_level_1 = S.trimmed;
+
+else
+    error('File does not contain drifters_level_1 or trimmed')
+end
+
+
+
+%
+time = adcp_level_1.time;
+dt = 0.0069;
+% Require tidal peaks to be at least ~8 hours apart
+minDist = round((8/24)/dt);
+peakBlank = 45/(24*60); % 30 min on each side of peak eta
+
+eta = adcp_level_1.eta;
+
+deta = gradient(eta);
+% theta = mod(rad2deg(angle(hilbert(eta))),360);
+
+% Find highs
+[pks,high_idx] = findpeaks(eta, ...
+    'MinPeakDistance',minDist);
+
+% Find lows
+[neg_pks,low_idx] = findpeaks(-eta, ...
+    'MinPeakDistance',minDist);
+
+troughs = -neg_pks;
+
+phase = strings(size(eta));
+
+% First assign rising/falling based on the sequence of highs and lows
+ext_idx  = [high_idx(:); low_idx(:)];
+ext_type = [repmat("High",numel(high_idx),1); ...
+            repmat("Low", numel(low_idx),1)];
+
+% Sort extrema in time order
+[ext_idx,order] = sort(ext_idx);
+ext_type = ext_type(order);
+
+for i = 1:length(ext_idx)-1
+
+    i1 = ext_idx(i);
+    i2 = ext_idx(i+1);
+
+    if ext_type(i) == "High" && ext_type(i+1) == "Low"
+
+        phase(i1:i2) = "Falling";
+
+    elseif ext_type(i) == "Low" && ext_type(i+1) == "High"
+
+        phase(i1:i2) = "Rising";
+
+    end
+end
+
+% Overwrite anything within +/- 30 min of each high or low
+for i = 1:numel(high_idx)
+
+    idx = abs(time - time(high_idx(i))) <= peakBlank;
+
+    phase(idx) = "High";
+
+end
+
+for i = 1:numel(low_idx)
+
+    idx = abs(time - time(low_idx(i))) <= peakBlank;
+
+    phase(idx) = "Low";
+
+end
+
+% Plot eta w phases
+figure
+hold on
+
+% Create masked copies
+eta_rising  = eta;
+eta_falling = eta;
+eta_high    = eta;
+eta_low     = eta;
+
+eta_rising(phase ~= "Rising")   = NaN;
+eta_falling(phase ~= "Falling") = NaN;
+eta_high(phase ~= "High")       = NaN;
+eta_low(phase ~= "Low")         = NaN;
+
+% Plot
+plot(time,eta_rising, 'b','LineWidth',2)
+plot(time,eta_high,   'r','LineWidth',2)
+plot(time,eta_falling,'g','LineWidth',2)
+plot(time,eta_low,    'm','LineWidth',2)
+
+plot(time(high_idx),eta(high_idx),'r^', ...
+    'MarkerFaceColor','r')
+
+plot(time(low_idx),eta(low_idx),'bv', ...
+    'MarkerFaceColor','b')
+
+yline(0,'k--')
+
+legend('Rising','High','Falling','Low')
+xlabel('Time')
+ylabel('\eta')
+grid on
+
+%% Find phase indices for trajectorie sorting
+
+
+[nRows,nCols] = size(drifters_level_1);
+
+for r = 1:nRows
+
+    for c = 1:nCols
+
+        % Only assign ID if the field does not already exist
+        if ~isfield(drifters_level_1,'ID')
+            drifters_level_1(r,c).ID = c;
+        end
+
+        drifter_time = datenum(drifters_level_1(r,c).Date_and_time);
+
+        tide_phase = strings(size(drifter_time));
+
+        for j = 1:numel(drifter_time)
+
+            [~,idx] = min(abs(time - drifter_time(j)));
+
+            tide_phase(j) = phase(idx);
+
+        end
+
+        drifters_level_1(r,c).TidePhase = tide_phase;
+
+    end
+end
+
+drifters_level_2 = drifters_level_1;
+
+
+%% QAQC figure
+
+
+figure
+hold on
+
+% Plot full pressure/water-level record
+plot(time, eta, 'k-', 'LineWidth', 1)
+
+% Colors matching your tidal-phase plot
+phaseNames  = {'Rising','High','Falling','Low'};
+phaseColors = {'b','r','g','m'};
+
+% Store handles for clean legend
+h = gobjects(numel(phaseNames),1);
+
+for p = 1:numel(phaseNames)
+
+    currentPhase = phaseNames{p};
+
+    drifter_times = [];
+    drifter_eta   = [];
+
+    % Loop through all deployments and drifters
+    for r = 1:size(drifters_level_2,1)
+
+        for c = 1:size(drifters_level_2,2)
+
+            D = drifters_level_2(r,c);
+
+            if isempty(D.Date_and_time) || isempty(D.TidePhase)
+                continue
+            end
+
+            Dtime = datenum(D.Date_and_time);
+
+            % Observations assigned to current tidal phase
+            idx_phase = D.TidePhase == currentPhase;
+
+            if ~any(idx_phase)
+                continue
+            end
+
+            Dtime_phase = Dtime(idx_phase);
+
+            % Find nearest ADCP eta value for every drifter observation
+            for j = 1:numel(Dtime_phase)
+
+                [~,idx_adcp] = min(abs(time - Dtime_phase(j)));
+
+                drifter_times(end+1,1) = Dtime_phase(j);
+                drifter_eta(end+1,1)   = eta(idx_adcp);
+
+            end
+        end
+    end
+
+    % Plot all observations for this phase
+    h(p) = scatter( ...
+        drifter_times, ...
+        drifter_eta, ...
+        12, ...
+        phaseColors{p}, ...
+        'filled');
+
+end
+
+xlabel('Time')
+ylabel('\eta')
+title(sprintf('Drifter Tidal Phase Assignment - %s', cfg.name))
+
+legend(h,phaseNames,'Location','best')
+
+grid on
+
+%% Now assign region ID to every observation
+
+% Load regions
+load('regions.mat')
+
+% Loop through deployments
+for p = 1:size(drifters_level_2,1)
+
+    % Loop through drifters
+    for j = 1:size(drifters_level_2,2)
+
+        % Skip empty drifters
+        if isempty(drifters_level_2(p,j).East) || ...
+           isempty(drifters_level_2(p,j).North)
+
+            drifters_level_2(p,j).Regions = [];
+            continue
+        end
+
+        east  = drifters_level_2(p,j).East;
+        north = drifters_level_2(p,j).North;
+
+        % 0 = outside all seven regions
+        regionID = zeros(size(east));
+
+        % Determine region for every observation
+        for r = 1:numel(regions)
+
+            inside = inpolygon( ...
+                east, ...
+                north, ...
+                regions(r).Easting, ...
+                regions(r).Northing);
+
+            regionID(inside) = r;
+
+        end
+
+        % Save region classification
+        drifters_level_2(p,j).Regions = regionID;
+
+    end
+end
+
+%% Sort the drifter observations by tidal phase they occured in
+High = struct([]);
+Low = struct([]);
+Rising = struct([]);
+Falling = struct([]);
+
+h = 0;
+l = 0;
+r = 0;
+f = 0;
+
+for i = 1:numel(drifters_level_2)
+
+    if isempty(drifters_level_2(i).TidePhase)
+        continue
+    end
+
+    p = drifters_level_2(i).TidePhase;
+
+    % HIGH
+    idx = p == "High";
+
+    if any(idx)
+
+        h = h + 1;
+
+        High(h).ID   = drifters_level_2(i).ID;
+        High(h).Lat  = drifters_level_2(i).Lat(idx);
+        High(h).Lon  = drifters_level_2(i).Lon(idx);
+        High(h).Time = drifters_level_2(i).Date_and_time(idx);
+        High(h).Regions = drifters_level_2(i).Regions(idx);
+        High(h).V = drifters_level_2(i).V(idx);
+        High(h).v_e = drifters_level_2(i).v_e(idx);
+        High(h).v_n = drifters_level_2(i).v_n(idx);
+
+    end
+
+    % LOW
+    idx = p == "Low";
+
+    if any(idx)
+
+        l = l + 1;
+
+        Low(l).ID   = drifters_level_2(i).ID;
+        Low(l).Lat  = drifters_level_2(i).Lat(idx);
+        Low(l).Lon  = drifters_level_2(i).Lon(idx);
+        Low(l).Time = drifters_level_2(i).Date_and_time(idx);
+        Low(l).Regions = drifters_level_2(i).Regions(idx);
+        Low(l).V = drifters_level_2(i).V(idx);
+        Low(l).v_e = drifters_level_2(i).v_e(idx);
+        Low(l).v_n = drifters_level_2(i).v_n(idx);
+        %         Low(l).Start_time = drifters_level_1(i).Start_time(idx);
+
+    end
+
+    % RISING
+    idx = p == "Rising";
+
+    if any(idx)
+
+        r = r + 1;
+
+        Rising(r).ID   = drifters_level_2(i).ID;
+        Rising(r).Lat  = drifters_level_2(i).Lat(idx);
+        Rising(r).Lon  = drifters_level_2(i).Lon(idx);
+        Rising(r).Time = drifters_level_2(i).Date_and_time(idx);
+        Rising(r).Regions = drifters_level_2(i).Regions(idx);
+        Rising(r).V = drifters_level_2(i).V(idx);
+        Rising(r).v_e = drifters_level_2(i).v_e(idx);
+        Rising(r).v_n = drifters_level_2(i).v_n(idx);
+        
+    end
+
+    % FALLING
+    idx = p == "Falling";
+
+    if any(idx)
+
+        f = f + 1;
+
+        Falling(f).ID   = drifters_level_2(i).ID;
+        Falling(f).Lat  = drifters_level_2(i).Lat(idx);
+        Falling(f).Lon  = drifters_level_2(i).Lon(idx);
+        Falling(f).Time = drifters_level_2(i).Date_and_time(idx);
+        Falling(f).Regions = drifters_level_2(i).Regions(idx);
+        Falling(f).V = drifters_level_2(i).V(idx);
+        Falling(f).v_e = drifters_level_2(i).v_e(idx);
+        Falling(f).v_n = drifters_level_2(i).v_n(idx);
+
+    end
+
+end
+
+%% Put in struct for saving
+TidalPhase.High    = High;
+TidalPhase.Low     = Low;
+TidalPhase.Rising  = Rising;
+TidalPhase.Falling = Falling;
+
+
+
+%% Check to see if it even worked
+
+for p = 1:size(drifters_level_2,1)
+
+    for j = 1:size(drifters_level_2,2)
+
+        if ~isempty(drifters_level_2(p,j).East)
+
+            fprintf(['Deployment %d | Drifter %d | ', ...
+                     'East = %d | Regions = %d | TidePhase = %d\n'], ...
+                p, ...
+                drifters_level_2(p,j).ID, ...
+                numel(drifters_level_2(p,j).East), ...
+                numel(drifters_level_2(p,j).Regions), ...
+                numel(drifters_level_2(p,j).TidePhase));
+
+        end
+
+    end
+end
+
+
+
+end
+% 
+% %% 
+% % Scatter trajectories with velocity as color
+% % Histogram of all the speed in the basin for each tidal phase

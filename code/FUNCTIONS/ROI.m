@@ -1,5 +1,10 @@
-function ROI(adcp_level_2, ROI_ADCP, cfg)
+function ROI(cfg)
 
+fname_adcp_level_2 = fullfile(cfg.out.adcp_data, [cfg.obsTag '_adcp_level_2.mat']);
+load(fname_adcp_level_2);
+
+fname_ROI = fullfile(cfg.out.comp_data, [cfg.obsTag '_ROI_ADCP.mat'])
+load(fname_ROI);
 %% U and V predicted from the complex EOF
 U_pred_cmplx = real(adcp_level_2.EC_cmplx(:,1:3)*adcp_level_2.EOFs_cmplx(:,1:3)')+real(adcp_level_2.trend_cmplx);
 V_pred_cmplx = imag(adcp_level_2.EC_cmplx(:,1:3)*adcp_level_2.EOFs_cmplx(:,1:3)')+imag(adcp_level_2.trend_cmplx);
@@ -46,7 +51,7 @@ for j = 1:size(ROI_ADCP,1);
         plot(adcp_vn,adcp_dbins,'k','LineWidth',2)
         hold on
         plot(v2_ROI(1,:),adcp_level_2.zonh_grid*P,'r','LineWidth',2)
-        plot(avg_vn,P,'ro','LineWidth',2)
+        plot(avg_vn,P-.5,'ro','LineWidth',2)
         hold off
         xlabel('m/s');
         ylabel('Depth (m)');
@@ -60,7 +65,7 @@ for j = 1:size(ROI_ADCP,1);
         plot(adcp_ve,adcp_dbins,'k','LineWidth',2)
         hold on
         plot(u2_ROI(1,:),adcp_level_2.zonh_grid*P,'r','LineWidth',2)
-        plot(avg_ve,P,'ro','LineWidth',2)
+        plot(avg_ve,P-.5,'ro','LineWidth',2)
         hold off
         xlabel('m/s');
         ylabel('Depth (m)');
@@ -78,6 +83,7 @@ for j = 1:size(ROI_ADCP,1);
 
 
         exportgraphics(fig, fullfile(cfg.out.comp_figures, [cfg.obsTag fname]), 'Resolution', 300);
+        savefig(fig, fullfile(cfg.out.comp_figures,[cfg.obsTag fname_1]));
 
 
 

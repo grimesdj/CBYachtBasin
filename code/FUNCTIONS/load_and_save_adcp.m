@@ -1,5 +1,6 @@
-function [adcp_level_1] = load_and_save_adcp(inputDir, inputFile, cfg);
-
+function [adcp_level_1] = load_and_save_adcp(cfg);
+inputDir = cfg.adcp_input_dir;
+inputFile = cfg.adcp_input_file;
 
 %% Load the ADCP data
 
@@ -91,6 +92,8 @@ ylabel('mab','interpreter','latex')
 
 % call this L1
 
+eta = pressure - mean(pressure);
+
 ADCP_comp.time = time;
 ADCP_comp.V_E = V1;
 % ADCP_comp.V_E_raw = V1_1;
@@ -101,6 +104,7 @@ ADCP_comp.East_avg = East_avg;
 ADCP_comp.North_avg = North_avg;
 ADCP_comp.qcFlag = qcFlag;
 ADCP_comp.pressure = pressure;
+ADCP_comp.eta = eta;
 ADCP_comp.east = east;
 ADCP_comp.north = north;
 ADCP_comp.f1 = f1;

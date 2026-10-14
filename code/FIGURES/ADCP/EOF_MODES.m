@@ -1,0 +1,57 @@
+close all; clear all;
+%%
+% main_dir = 'C:\Users\bcm3620\OneDrive - UNC-Wilmington\CB_YachtBasin\'; %This is where the data is on your machine
+main_dir = 'C:\Users\Ben\OneDrive - UNC-Wilmington\CB_YachtBasin\'; %This is where the data is on your machine
+out_dir = ([main_dir, 'ALL_IOP_PROCESSING\FIGURES\ADCP'])
+%% Load the EOF data for all avaible observation periods *NORTH ADCP*
+EOF_MARCH = load([main_dir, 'MarshMadness\PROCESSED_DATA\ADCP\MarshMadness_NorthADCP_adcp_level_2.mat']);
+
+EOF_MAY = load([main_dir, 'MarshMayhem\PROCESSED_DATA\ADCP\MarshMayhem_NorthADCP_adcp_level_2.mat']);
+
+EOF_OCT = load([main_dir, 'FallFrolic\PROCESSED_DATA\ADCP\FallFrolic_100825_NorthADCP_adcp_level_2.mat']);
+
+EOF_JUNE = load([main_dir, 'JuneJamboree\PROCESSED_DATA\ADCP\JuneJamboree_NorthADCP_adcp_level_2.mat']);
+
+%% 
+modes = figure;
+
+ax1 = subplot(1,3,1);
+plot(real(EOF_MARCH.adcp_level_2.scaledEOFs_cmplx(:,1)),EOF_MARCH.adcp_level_2.zonh_grid,'k','linewidth',2);
+xline(0);
+hold on;
+plot(real(EOF_MAY.adcp_level_2.scaledEOFs_cmplx(:,1)),EOF_MAY.adcp_level_2.zonh_grid,'r','linewidth',2);
+plot(-real(EOF_OCT.adcp_level_2.scaledEOFs_cmplx(:,1)),EOF_OCT.adcp_level_2.zonh_grid,'b','linewidth',2);
+plot(real(EOF_JUNE.adcp_level_2.scaledEOFs_cmplx(:,1)),EOF_JUNE.adcp_level_2.zonh_grid,'g','linewidth',2);
+hold off
+xlim([-.35 .35]);
+ylabel('z/h');
+title('Mode 1');
+%  legend('March', '', 'May', 'October', 'location','best');
+
+ax2 = subplot(1,3,2);
+plot(real(EOF_MARCH.adcp_level_2.scaledEOFs_cmplx(:,2)),EOF_MARCH.adcp_level_2.zonh_grid,'k','linewidth',2);
+xline(0);
+hold on;
+plot(real(EOF_MAY.adcp_level_2.scaledEOFs_cmplx(:,2)),EOF_MAY.adcp_level_2.zonh_grid,'r','linewidth',2);
+plot(real(EOF_OCT.adcp_level_2.scaledEOFs_cmplx(:,2)),EOF_OCT.adcp_level_2.zonh_grid,'b','linewidth',2);
+plot(real(EOF_JUNE.adcp_level_2.scaledEOFs_cmplx(:,2)),EOF_JUNE.adcp_level_2.zonh_grid,'g','linewidth',2);
+hold off
+xlim([-.15 .15]);
+xlabel('Amplitude (m/s)');
+title('Mode 2');
+
+ax3 = subplot(1,3,3);
+h1 = plot(real(EOF_MARCH.adcp_level_2.scaledEOFs_cmplx(:,3)),EOF_MARCH.adcp_level_2.zonh_grid,'k','linewidth',2);
+xline(0);
+hold on;
+h2 = plot(-real(EOF_MAY.adcp_level_2.scaledEOFs_cmplx(:,3)),EOF_MAY.adcp_level_2.zonh_grid,'r','linewidth',2);
+h3 = plot(real(EOF_OCT.adcp_level_2.scaledEOFs_cmplx(:,3)),EOF_OCT.adcp_level_2.zonh_grid,'b','linewidth',2);
+plot(real(EOF_JUNE.adcp_level_2.scaledEOFs_cmplx(:,3)),EOF_JUNE.adcp_level_2.zonh_grid,'g','linewidth',2);
+hold off
+xlim([-.1 .1]);
+title('Mode 3');
+
+exportgraphics(modes,fullfile(out_dir,'modes_across_all_IOPS.png'),'Resolution',600);
+
+savefig(modes, fullfile(out_dir,'modes_across_all_IOPS.fig'));
+
