@@ -2,15 +2,16 @@ clear all
 close all
 %% Where is the data?
 rootDir = '~/OneDriveUNCW/DATA/CB_YachtBasin/FallFlood/'
-L0Dir  = [rootDir,'PROCESSED_DATA',filesep,'CTD',filesep];
+L0Dir  = [rootDir,'PROCESSED_DATA',filesep,'RBR',filesep];
 %% RBR-CTD+F:
 ctdSerialNumber = 230442;
-rbrFile = dir(sprintf('%sRBR/%d_*.rsk',rootDir,ctdSerialNumber));
+fileDate    = 20261028;
+rbrFile = dir(sprintf('%sRBR/%d_%d_*.rsk',rootDir,ctdSerialNumber,fileDate));
 %% Locsys GT-31 GPS:
-gpsFile = [rootDir,'GPS/GPSUSER05_133200472_20260930_124716.TXT'];% /Users/derekgrimes/Library/CloudStorage/OneDrive-UNC-Wilmington/DATA/CB_YachtBasin/FallFlood/GPS/GPSUSER05_133200472_20260930_124716.TXT 
+gpsFile = [rootDir,'GPS/GPSUSER05_133200472_20261028_093234.TXT'];% /Users/derekgrimes/Library/CloudStorage/OneDrive-UNC-Wilmington/DATA/CB_YachtBasin/FallFlood/GPS/GPSUSER05_133200472_20260930_124716.TXT 
 
 %% Atmospheric Pressure offset
-ATM_Time = [datenum('14-June-2026 12:50:00'), datenum('14-June-2026 13:00:00')];
+ATM_Time = [datenum('28-Oct-2026 10:30:00'), datenum('28-Oct-2026 10:50:00')];
 
 %% Output file:
 fout = [L0Dir,filesep,num2str(ctdSerialNumber),'_casts_L0.mat'];
@@ -67,6 +68,8 @@ chla_raw  = data(:,4);
 fdom_raw  = data(:,5);
 turb_raw  = data(:,6);
 salt      = data(:,9);
+
+% figure, plot(datetime(time,'convertFrom','datenum'),pres_abs)
 
 % $$$ %% Atmospheric Pressure offset
 % $$$ ATM_Time = [datenum('14-June-2026 12:50:00'), datenum('14-June-2026 13:00:00')];
@@ -148,5 +151,19 @@ end
 % save gridded data to netcdf files
 CTD = struct('Time',time_grid,'Latitude',latitude_grid,'Longitude',longitude_grid,'Pressure',pres_grid,'CHLa',chla_grid,'FDOM',fdom_grid,'NTU',turb_grid,'Temperature',temp_grid,'Conductivity',cond_grid,'Salinity',salt_grid)
 %
+density = gsw_rho(CTD.Salinity,CTD.Temperature,CTD.Pressure*ones(1,size(CTD.Temperature,2)));
+CTD.Density = density;
+%
 % archive raw and gridded data
-save(fout,'time','cond','temp','pres','salt','chla_raw','fdom_raw','turb_raw','gps','time_grid','pres_grid','temp_grid','cond_grid','salt_grid','chla_grid','turb_grid','fdom_grid','latitude_grid','longitude_grid','pres0')
+save(fout,'time','cond','temp','pres','salt','density','chla_raw','fdom_raw','turb_raw','gps','time_grid','pres_grid','temp_grid','cond_grid','salt_grid','chla_grid','turb_grid','fdom_grid','latitude_grid','longitude_grid','pres0')
+
+
+figure,
+imagesc(datetime(CTD.Time,'convertFrom','datenum'),CTD.Pressure,CTD.Temperature)
+
+figure,
+imagesc(datetime(CTD.Time,'convertFrom','datenum'),CTD.Pressure,CTD.Salinity)
+
+figure,
+imagesc(datetime(CTD.Time,'convertFrom','datenum'),CTD.Pressure,CTD.Density)
+
