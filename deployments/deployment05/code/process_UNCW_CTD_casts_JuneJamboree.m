@@ -10,7 +10,8 @@ rbrFile = dir(sprintf('%sRBR/%d_*.rsk',rootDir,ctdSerialNumber));
 gpsFile = [rootDir,'GPS/GPSUSER05_133200472_20260614_110619.TXT'];
 
 %% Output file:
-fout = [L0Dir,filesep,num2str(ctdSerialNumber),'_casts_L0.mat'];
+fout0 = [L0Dir,filesep,num2str(ctdSerialNumber),'_casts_L0.mat'];
+fout  = [L0Dir,filesep,num2str(ctdSerialNumber),'_CTDF_L0.mat'];
 
 
 
@@ -143,5 +144,20 @@ end
 % save gridded data to netcdf files
 CTD = struct('Time',time_grid,'Latitude',latitude_grid,'Longitude',longitude_grid,'Pressure',pres_grid,'CHLa',chla_grid,'FDOM',fdom_grid,'NTU',turb_grid,'Temperature',temp_grid,'Conductivity',cond_grid,'Salinity',salt_grid)
 %
+%
+density = gsw_rho(CTD.Salinity,CTD.Temperature,CTD.Pressure*ones(1,size(CTD.Temperature,2)));
+CTD.Density = density;
+%
 % archive raw and gridded data
-save(fout,'time','cond','temp','pres','salt','chla_raw','fdom_raw','turb_raw','gps','time_grid','pres_grid','temp_grid','cond_grid','salt_grid','chla_grid','turb_grid','fdom_grid','latitude_grid','longitude_grid','pres0')
+save(fout0,'time','cond','temp','pres','salt','density','chla_raw','fdom_raw','turb_raw','gps','time_grid','pres_grid','temp_grid','cond_grid','salt_grid','chla_grid','turb_grid','fdom_grid','latitude_grid','longitude_grid','pres0')
+
+figure,
+imagesc(datetime(CTD.Time,'convertFrom','datenum'),CTD.Pressure,CTD.Temperature)
+
+figure,
+imagesc(datetime(CTD.Time,'convertFrom','datenum'),CTD.Pressure,CTD.Salinity)
+
+figure,
+imagesc(datetime(CTD.Time,'convertFrom','datenum'),CTD.Pressure,CTD.Density)
+
+save(fout,'-struct','CTD')

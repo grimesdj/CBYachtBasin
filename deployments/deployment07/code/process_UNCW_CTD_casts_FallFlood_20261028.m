@@ -14,7 +14,8 @@ gpsFile = [rootDir,'GPS/GPSUSER05_133200472_20261028_093234.TXT'];% /Users/derek
 ATM_Time = [datenum('28-Oct-2026 10:30:00'), datenum('28-Oct-2026 10:50:00')];
 
 %% Output file:
-fout = [L0Dir,filesep,num2str(ctdSerialNumber),'_casts_L0.mat'];
+fout0 = [L0Dir,filesep,num2str(ctdSerialNumber),'_20261028_casts_L0.mat'];
+fout = [L0Dir,filesep,num2str(ctdSerialNumber),'_20261028_CTDF_L0.mat'];
 if ~exist(L0Dir,'dir')
     eval(['!mkdir -p ',L0Dir])
 end
@@ -155,7 +156,7 @@ density = gsw_rho(CTD.Salinity,CTD.Temperature,CTD.Pressure*ones(1,size(CTD.Temp
 CTD.Density = density;
 %
 % archive raw and gridded data
-save(fout,'time','cond','temp','pres','salt','density','chla_raw','fdom_raw','turb_raw','gps','time_grid','pres_grid','temp_grid','cond_grid','salt_grid','chla_grid','turb_grid','fdom_grid','latitude_grid','longitude_grid','pres0')
+save(fout0,'time','cond','temp','pres','salt','density','chla_raw','fdom_raw','turb_raw','gps','time_grid','pres_grid','temp_grid','cond_grid','salt_grid','chla_grid','turb_grid','fdom_grid','latitude_grid','longitude_grid','pres0')
 
 
 figure,
@@ -167,3 +168,4 @@ imagesc(datetime(CTD.Time,'convertFrom','datenum'),CTD.Pressure,CTD.Salinity)
 figure,
 imagesc(datetime(CTD.Time,'convertFrom','datenum'),CTD.Pressure,CTD.Density)
 
+save(fout,'-struct','CTD')
