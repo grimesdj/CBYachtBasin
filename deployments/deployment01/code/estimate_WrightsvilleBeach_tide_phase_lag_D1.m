@@ -1,7 +1,7 @@
 clear all
 close all
 % Enter input /directory/ and fileName root without file extension
-inputDir  = '/Users/derekgrimes/OneDriveUNCW/Data/CB_YachtBasin/MarshMadness/AQD5459/';
+inputDir  = 'C:\Users\bcm3620\OneDrive - UNC-Wilmington\CB_YachtBasin\MarshMadness\AQD5459';
 inputFile = 'CB_N101';
 fileName  = [inputDir,filesep,inputFile];
 % Enter raw output /directory/ and fileName without .mat
@@ -65,7 +65,8 @@ basinWaterLevel(flag)=interp1(time(~flag),basinWaterLevel(~flag),time(flag),'lin
 %
 %
 % apply a 30-min filter:
-Nf = 7200/dt; if iseven(Nf), Nf=Nf+1; end
+% Nf = 7200/dt; if iseven(Nf), Nf=Nf+1; end
+Nf = 7200/dt; if mod(Nf,2)==0, Nf=Nf+1; end
 flt= hanning(Nf); flt = flt/sum(flt);
 basinWaterLevel = conv(basinWaterLevel,flt,'same');
 waterLevel      = conv(waterLevel,flt,'same');
