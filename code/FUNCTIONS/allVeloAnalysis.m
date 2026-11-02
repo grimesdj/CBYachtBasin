@@ -10,6 +10,8 @@ obsFiles = {'MarshMadness\PROCESSED_DATA\DRIFTERS\MarshMadness_TemporalRes_RMSE.
 
 names = {'MarshMadness','MarshMayhem','FallFrolic_100825','FallFrolic_101025','NovDep','JuneJamboree','SummerFlood'};
 
+save_dir = 'C:\Users\bcm3620\OneDrive - UNC-Wilmington\THESIS\THESIS_DRAFTING\FIGURES\RMSE';
+
 for i = 1:numel(obsFiles)
 
     filename = fullfile(cfg.root_data, obsFiles{i});
@@ -291,9 +293,15 @@ end
 NRMSE_byVelocity_Speed = ...
     RMSE_byVelocity_Speed_1Hz ./ meanSpeed_byVelocity;
 
+NMRES_byVelocity_Speed_smoothed = ...
+    RMSE_byVelocity_Speed_smoothed ./meanSpeed_byVelocity;
+
 % Convert to percent
 NRMSE_percent = ...
     NRMSE_byVelocity_Speed * 100;
+
+NRMSE_smoothed_percent = ...
+    NMRES_byVelocity_Speed_smoothed * 100;
 
 %% Bin counts
 N_bins = N_byVelocity(:,1);
@@ -402,6 +410,14 @@ for rr = 1:nRes
 
 end
 
+plot( ...
+        xpos, ...
+        NRMSE_smoothed_percent(:,5), ...
+        '--*', ...
+        'LineWidth',1.5, ...
+        'DisplayName', ...
+        sprintf('%d s',Resolutions(5)));
+
 xlabel('Doppler Drifter Velocity (m/s)')
 ylabel('Normalized RMSE (%)')
 
@@ -418,5 +434,7 @@ grid on
 
 all_RMSE = data;
 
+
+dopplerSpectraByRegion(data);
 
 end

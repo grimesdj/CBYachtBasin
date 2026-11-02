@@ -5,9 +5,10 @@ obsFiles = {'MarshMadness\PROCESSED_DATA\DRIFTERS\MarshMadness_TidalPhase.mat'
     'FallFrolic\PROCESSED_DATA\DRIFTERS\FallFrolic_100825_TidalPhase.mat'
     'FallFrolic\PROCESSED_DATA\DRIFTERS\FallFrolic_101025_TidalPhase.mat'
     'NovDep\PROCESSED_DATA\DRIFTERS\NovDep_TidalPhase.mat'
-    'JuneJamboree\PROCESSED_DATA\DRIFTERS\JuneJamboree_TidalPhase.mat'};
+    'JuneJamboree\PROCESSED_DATA\DRIFTERS\JuneJamboree_TidalPhase.mat'
+    'SummerFlood\PROCESSED_DATA\DRIFTERS\SummerFlood_TidalPhase.mat'};
 
-names = {'MarshMadness','MarshMayhem','FallFrolic_100825','FallFrolic_101025','NovDep','JuneJamboree'};
+names = {'MarshMadness','MarshMayhem','FallFrolic_100825','FallFrolic_101025','NovDep','JuneJamboree','SummerFlood'};
 
 %% Choose temporal differencing window
 
@@ -41,107 +42,6 @@ for p = 1:numel(phases)
         end
     end
 end
-
-%% Recalculate velocity using selected temporal differencing window
-% 
-% if temporal_res > 1
-% 
-%     proj = projcrs(32119);
-% 
-%     halfLag = temporal_res/2;
-% 
-%     for p = 1:numel(phases)
-% 
-%         phase = phases{p};
-% 
-%         obs_names = fieldnames(TidalData.(phase));
-% 
-%         for i = 1:numel(obs_names)
-% 
-%             obs = obs_names{i};
-% 
-%             for j = 1:numel(TidalData.(phase).(obs))
-% 
-%                 D = TidalData.(phase).(obs)(j);
-% 
-%                 %% Skip empty trajectories
-% 
-%                 if isempty(D.Lat) || isempty(D.Lon)
-%                     continue
-%                 end
-% 
-%                 N = length(D.Lat);
-% 
-%                 %% Make sure trajectory is long enough
-% 
-%                 if N <= temporal_res
-%                     continue
-%                 end
-% 
-% 
-%                 %% Convert Lat/Lon to Easting/Northing
-% 
-%                 [Easting,Northing] = projfwd( ...
-%                     proj, ...
-%                     D.Lat, ...
-%                     D.Lon);
-% 
-% 
-%                 %% Centered differencing indices
-% 
-%                 idx_center = (1 + halfLag):(N - halfLag);
-% 
-%                 idx_before = idx_center - halfLag;
-% 
-%                 idx_after = idx_center + halfLag;
-% 
-% 
-%                 %% Position differences
-% 
-%                 delta_east = ...
-%                     Easting(idx_after) - Easting(idx_before);
-% 
-%                 delta_north = ...
-%                     Northing(idx_after) - Northing(idx_before);
-% 
-% 
-%                 %% Calculate new velocities
-% 
-%                 new_v_e = delta_east ./ temporal_res;
-% 
-%                 new_v_n = delta_north ./ temporal_res;
-% 
-%                 new_V = sqrt(new_v_e.^2 + new_v_n.^2);
-% 
-% 
-%                 %% Replace velocity fields
-% 
-%                 TidalData.(phase).(obs)(j).v_e = new_v_e;
-% 
-%                 TidalData.(phase).(obs)(j).v_n = new_v_n;
-% 
-%                 TidalData.(phase).(obs)(j).V = new_V;
-% 
-% 
-%                 %% Center corresponding data
-% 
-%                 TidalData.(phase).(obs)(j).Lat = ...
-%                     D.Lat(idx_center);
-% 
-%                 TidalData.(phase).(obs)(j).Lon = ...
-%                     D.Lon(idx_center);
-% 
-%                 TidalData.(phase).(obs)(j).Time = ...
-%                     D.Time(idx_center);
-% 
-%                 TidalData.(phase).(obs)(j).Regions = ...
-%                     D.Regions(idx_center);
-% 
-%             end
-%         end
-%     end
-% 
-% end
 
 %% Histograms
 
@@ -219,7 +119,7 @@ end
     end
 
     geobasemap(gx,'satellite')
-    gx.CLim = [0 2];
+    gx.CLim = [0 1.5];
 
     cb = colorbar;
     cb.Label.String = 'Velocity (m/s)';
@@ -233,8 +133,8 @@ end
 
 end
 
-%% QAQC
-% V_thresh = 2.5;
+% %% QAQC
+% V_thresh = 2;
 % 
 % phases = fieldnames(TidalData);
 % 
@@ -276,7 +176,7 @@ end
 %     end
 % end
 % 
-% figure;geoscatter(TidalData.Rising.MarshMadness(11).Lat,TidalData.Rising.MarshMadness(11).Lon,10,TidalData.Rising.MarshMadness(11).V,'filled');geobasemap('satellite');
+% figure;geoscatter(TidalData.Low.JuneJamboree(11).Lat,TidalData.Low.JuneJamboree(11).Lon,10,TidalData.Low.JuneJamboree(11).V,'filled');geobasemap('satellite');
 % idx = find(c.Position(1) == TidalData.Rising.MarshMadness(11).Lat & c.Position(2) == TidalData.Rising.MarshMadness(11).Lon)
 % idx = idx(1);
 % TidalData.Rising.MarshMadness(11).Time(idx)

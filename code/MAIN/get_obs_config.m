@@ -237,7 +237,7 @@ switch [obsPeriod, adcpLoc]
 
         cfg.drifters_dep_times = [cfg.root_data ,'DRIFTERS\DATA\Deployment_081126\Dep_times\Dep_07_times_01.xlsx'];        
         
-        cfg.adcp_input_dir = [cfg.root_data, 'AQD3263\'];
+        cfg.adcp_input_dir = [cfg.root_data, 'AQD5459\'];
         cfg.adcp_input_file = 'CB_N601'; 
         
      case { ['SummerFlood', 'SouthADCP'] }
@@ -248,11 +248,40 @@ switch [obsPeriod, adcpLoc]
         
         cfg.drifters_raw_dir = [cfg.root_data ,'DRIFTERS\DATA\Deployment_081125\RAW'];
 %        cfg.drifters_dep_times = [cfg.root_data ,'DRIFTERS\DATA\Deployment_061426\Dep_times\Dep_06_times.xlsx'];
-        cfg.drifters_dep_times = [cfg.root_data ,'DRIFTERS\DATA\Deployment_061426\Dep_times\Dep_07_times.xlsx'];
+        cfg.drifters_dep_times = [cfg.root_data ,'DRIFTERS\DATA\Deployment_061426\Dep_times\Dep_07_times_01.xlsx'];
         
         
         cfg.adcp_input_dir = [cfg.root_data, 'AQD2710\'];
         cfg.adcp_input_file = 'CB_S601'; 
+        
+        
+     case { ['FallFlood', 'NorthADCP'] }
+        
+        cfg.name = 'FallFlood';
+        
+        cfg.root_data = [cfg.root_data, 'FallFlood\'];
+        
+        cfg.drifters_raw_dir = [cfg.root_data ,'DRIFTERS\DATA\Deployment_093026\RAW'];
+
+        cfg.drifters_dep_times = [cfg.root_data ,'DRIFTERS\DATA\Deployment_093026\Dep_times\Dep_08_times_v2.xlsx'];        
+        
+        cfg.adcp_input_dir = [cfg.root_data, 'AQD5459\'];
+        cfg.adcp_input_file = 'CB_N701'; 
+        
+     case { ['FallFlood', 'SouthADCP'] }
+        
+        cfg.name = 'FallFlood';
+        
+        cfg.root_data = [cfg.root_data, 'FallFlood\'];
+        
+        cfg.drifters_raw_dir = [cfg.root_data ,'DRIFTERS\DATA\Deployment_093026\RAW'];
+%        cfg.drifters_dep_times = [cfg.root_data ,'DRIFTERS\DATA\Deployment_061426\Dep_times\Dep_06_times.xlsx'];
+        cfg.drifters_dep_times = [cfg.root_data ,'DRIFTERS\DATA\Deployment_093026\Dep_times\Dep_08_times_v2.xlsx'];
+        
+        
+        cfg.adcp_input_dir = [cfg.root_data, 'AQD2710\'];
+        cfg.adcp_input_file = 'CB_S701'; 
+        
         
         case { ['ALL', 'NorthADCP'] }
         
@@ -268,6 +297,26 @@ switch [obsPeriod, adcpLoc]
         cfg.root_data = [cfg.root_data];
         
         
+        case { ['StationaryDep', 'NorthADCP'] }
+        
+        cfg.name = 'StationaryDep';
+        
+        cfg.root_data = [cfg.root_data 'StationaryDep\'];
+        
+        cfg.drifters_raw_dir = [cfg.root_data ,'DRIFTERS\DATA\Stationary_Deployment_093026\RAW'];
+        cfg.drifters_dep_times = [cfg.root_data ,'DRIFTERS\DATA\Stationary_Deployment_093026\Dep_times\Stationary_Dep_times.xlsx'];
+        
+        
+        case { ['StationaryDep', 'SouthADCP'] }
+        
+        cfg.name = 'StationaryDep';
+        
+        cfg.root_data = [cfg.root_data 'StationaryDep\'];
+        
+        cfg.drifters_raw_dir = [cfg.root_data ,'DRIFTERS\DATA\Stationary_Deployment_093026\RAW'];
+        cfg.drifters_dep_times = [cfg.root_data ,'DRIFTERS\DATA\Stationary_Deployment_093026\Dep_times\Stationary_Dep_times.xlsx'];
+        
+        
         
         
 
@@ -275,6 +324,30 @@ switch [obsPeriod, adcpLoc]
     
     
 end
+
+%% Processing settings (read by adcp_post_processing and comparison)
+
+% Height of the ADCP pressure sensor above the bed (m), per instrument.
+% Measure from the frame/mount: bed to the sensor on the Aquadopp head.
+switch adcpLoc
+    case 'NorthADCP'
+        cfg.p_sensor_hab = 0.20;   % <-- AQD5459: replace with measured value
+    case 'SouthADCP'
+        cfg.p_sensor_hab = 0.00;   % <-- AQD2710 / AQD13862: replace
+end
+
+% Level 2 surface extrapolation and EOF
+cfg.extrap_method = 'linear';     % 'linear' or 'constant'
+cfg.extrap_nfit   = 3;            % top valid bins used for the surface shear
+cfg.eof_nmodes    = 3;            % modes in the EOF reconstruction
+
+% Level 3 comparison
+cfg.adcp_latlon         = [34.05673145 -77.88949171];   % North ADCP
+cfg.roi_radius          = 50;     % m
+cfg.drifter_depth       = 0.5;    % m below surface
+cfg.max_time_offset_min = 15;     % min
+cfg.adcp_min_valid_frac = 0.5;    % raw top bin valid in this fraction of transit
+cfg.adcp_window_min = 20;   % total ADCP averaging window, centred on each transit (min)
 
 
  %% Set data output dirs

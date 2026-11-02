@@ -6,7 +6,7 @@ close all;
 root_data = 'C:\Users\bcm3620\OneDrive - UNC-Wilmington\'; %This is the path to the CB YACHT BASIN shared folder on your machine
 % Wherever you have the post processing GIT repo
 root_dir = 'C:\Users\bcm3620\OneDrive - UNC-Wilmington\THESIS\CBYachtBasin\'; % Path to the Post Processing folder on your machine
-
+% 
 % root_data = 'C:\Users\Ben\OneDrive - UNC-Wilmington\'; %This is the path to the CB YACHT BASIN shared folder on your machine
 % root_dir = 'C:\Users\Ben\OneDrive - UNC-Wilmington\THESIS\CBYachtBasin\'; % Path to the Post Processing folder on your machine
 
@@ -25,8 +25,10 @@ obsPeriod = 'ALL';
 % 'FallFrolic 101025 SHEET'
 % 'NovDep' *ONLY HAD NORTH ADCP*
 % 'JuneJamboree'
-% 'SummerFlood" *ADCP data not yet available*
+% 'SummerFlood" 
+% 'FallFlood' *ADCP data not available'
 % 'ALL' **THIS IS FOR ALL OBS-PERIOD ANALYSIS, NOT INTENDED FOR INTIAL PP**
+% 'StationaryDep' ** This is for drifter position error analysis **
 
 %% Choose North or South ADCP for analysis
 adcpLoc = 'NorthADCP';
@@ -55,8 +57,8 @@ if cfg.run_drifter_level_1
     save(fullfile(cfg.out.drifters_data, ...
         [cfg.name '_drifters_level_1.mat']), ...
         'drifters_level_1');
-%     save(fullfile(cfg.out.drifters_data, ...
-%         [cfg.name '_raw_drifters.mat']), 'raw_drifters');
+    save(fullfile(cfg.out.drifters_data, ...
+        [cfg.name '_raw_drifters.mat']), 'raw_drifters');
 
 else
 
@@ -68,14 +70,15 @@ end
 %% Run Drifter level 2: Temporal Res and Assigning Tidal phase and region
 
 [TidalPhase, drifters_level_2] = findTidalPhaseandRegion(cfg);
-
+[drifters_level_2, StuckInfo] = flagStuckDrifters(cfg, drifters_level_2);
 save(fullfile(cfg.out.drifters_data, [cfg.name '_drifters_level_2.mat']), 'drifters_level_2');
 save(fullfile(cfg.out.drifters_data, [cfg.name '_TidalPhase.mat']), 'TidalPhase');
 
 
 if cfg.run_drifter_level_1
 
-    Results = veloAnalysis(cfg);
+    % Results = veloAnalysis(cfg);
+    Results = veloAnalysis_v2(cfg);
 
     save(fullfile(cfg.out.drifters_data, [cfg.name '_TemporalRes_RMSE.mat']), 'Results');
 
@@ -93,13 +96,15 @@ end
 
 %% Run ADCP level 2
 
-[adcp_level_2] = adcp_post_processing(cfg);
+% [adcp_level_2] = adcp_post_processing(cfg);
+[adcp_level_2] = adcp_post_processing_v2(cfg);
 
 save(fullfile(cfg.out.adcp_data, [cfg.obsTag '_adcp_level_2.mat']), 'adcp_level_2');
 
 %% Run Level 3: Drifter and ADCP comparison
 
-[ROI_ADCP, ROI_EXTRAP, ROI_EOF, COMP] = comparison(cfg);
+[ROI_ADCP, ROI_EXTRAP, ROI_EOF, COMP] = comparison_v100(cfg);
+% [ROI_ADCP, ROI_EXTRAP, ROI_EOF, COMP] = comparison_v3(cfg)
 
 save(fullfile(cfg.out.comp_data, [cfg.obsTag '_ROI_ADCP.mat']), 'ROI_ADCP');
 save(fullfile(cfg.out.comp_data, [cfg.obsTag '_ROI_EXTRAP.mat']), 'ROI_EXTRAP');
@@ -108,6 +113,6 @@ save(fullfile(cfg.out.comp_data, [cfg.obsTag '_COMP.mat']), 'COMP');
 
 %% Run Level 4: Range of Instrument analysis
 
-ROI(cfg);
+ROI_v2(cfg);
 
 

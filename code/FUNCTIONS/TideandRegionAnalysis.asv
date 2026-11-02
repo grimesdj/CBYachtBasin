@@ -1,14 +1,20 @@
-function [out] = TideandRegionAnalysis(cfg)
+function [TidalData] = TideandRegionAnalysis(cfg)
 %%
 obsFiles = {'MarshMadness\PROCESSED_DATA\DRIFTERS\MarshMadness_TidalPhase.mat'
     'MarshMayhem\PROCESSED_DATA\DRIFTERS\MarshMayhem_TidalPhase.mat'
     'FallFrolic\PROCESSED_DATA\DRIFTERS\FallFrolic_100825_TidalPhase.mat'
     'FallFrolic\PROCESSED_DATA\DRIFTERS\FallFrolic_101025_TidalPhase.mat'
     'NovDep\PROCESSED_DATA\DRIFTERS\NovDep_TidalPhase.mat'
-    'JuneJamboree\PROCESSED_DATA\DRIFTERS\JuneJamboree_TidalPhase.mat'};
+    'JuneJamboree\PROCESSED_DATA\DRIFTERS\JuneJamboree_TidalPhase.mat'
+    'SummerFlood\PROCESSED_DATA\DRIFTERS\SummerFlood_TidalPhase.mat'};
 
-names = {'MarshMadness','MarshMayhem','FallFrolic_100825','FallFrolic_101025','NovDep','JuneJamboree'};
+names = {'MarshMadness','MarshMayhem','FallFrolic_100825','FallFrolic_101025','NovDep','JuneJamboree','SummerFlood'};
 
+%% Choose temporal differencing window
+
+temporal_res = 8;   % seconds
+% 1 = use original 1 Hz velocities
+% Other options: 2, 4, 8, 16, 32, 64, 128, 256
 %% Load in the data fromm each obs period
 for i = 1:numel(obsFiles)
 
@@ -113,7 +119,7 @@ end
     end
 
     geobasemap(gx,'satellite')
-    gx.CLim = [0 2.5];
+    gx.CLim = [0 2];
 
     cb = colorbar;
     cb.Label.String = 'Velocity (m/s)';
@@ -123,54 +129,54 @@ end
 end
 
 
-out = TidalData;
+% TidalData = TidalData;
 
 end
 
-%% QAQC
-% V_thresh = 2.5;
+% %% QAQC
+V_thresh = 2;
+
+phases = fieldnames(TidalData);
+
+for p = 1:numel(phases)
+
+    phase = phases{p};
+
+    obs_names = fieldnames(TidalData.(phase));
+
+    for i = 1:numel(obs_names)
+
+        obs = obs_names{i};
+
+        for j = 1:numel(TidalData.(phase).(obs))
+
+            D = TidalData.(phase).(obs)(j);
+
+            idx = find(D.V > V_thresh);
+
+            if ~isempty(idx)
+
+                DrifterID = repmat(D.ID, numel(idx), 1);
+
+                T = table( ...
+                    DrifterID, ...
+                    idx, ...
+                    D.Time(idx), ...
+                    D.Lat(idx), ...
+                    D.Lon(idx), ...
+                    D.V(idx), ...
+                    'VariableNames', ...
+                    {'DrifterID','Index','Time','Lat','Lon','V'});
+
+                fprintf('\n%s | %s\n', phase, obs)
+                disp(T)
+
+            end
+        end
+    end
+end
 % 
-% phases = fieldnames(out);
-% 
-% for p = 1:numel(phases)
-% 
-%     phase = phases{p};
-% 
-%     obs_names = fieldnames(out.(phase));
-% 
-%     for i = 1:numel(obs_names)
-% 
-%         obs = obs_names{i};
-% 
-%         for j = 1:numel(out.(phase).(obs))
-% 
-%             D = out.(phase).(obs)(j);
-% 
-%             idx = find(D.V > V_thresh);
-% 
-%             if ~isempty(idx)
-% 
-%                 DrifterID = repmat(D.ID, numel(idx), 1);
-% 
-%                 T = table( ...
-%                     DrifterID, ...
-%                     idx, ...
-%                     D.Time(idx), ...
-%                     D.Lat(idx), ...
-%                     D.Lon(idx), ...
-%                     D.V(idx), ...
-%                     'VariableNames', ...
-%                     {'DrifterID','Index','Time','Lat','Lon','V'});
-% 
-%                 fprintf('\n%s | %s\n', phase, obs)
-%                 disp(T)
-% 
-%             end
-%         end
-%     end
-% end
-% 
-% figure;geoscatter(out.Rising.MarshMadness(11).Lat,out.Rising.MarshMadness(11).Lon,10,out.Rising.MarshMadness(11).V,'filled');geobasemap('satellite');
-% idx = find(c.Position(1) == out.Rising.MarshMadness(11).Lat & c.Position(2) == out.Rising.MarshMadness(11).Lon)
+% figure;geoscatter(TidalData.Low.JuneJamboree(11).Lat,TidalData.Low.JuneJamboree(11).Lon,10,TidalData.Low.JuneJamboree(11).V,'filled');geobasemap('satellite');
+% idx = find(c.Position(1) == TidalData.Rising.MarshMadness(11).Lat & c.Position(2) == TidalData.Rising.MarshMadness(11).Lon)
 % idx = idx(1);
-% out.Rising.MarshMadness(11).Time(idx)
+% TidalData.Rising.MarshMadness(11).Time(idx)
