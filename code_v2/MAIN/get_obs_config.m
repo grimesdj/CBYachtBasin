@@ -386,7 +386,7 @@ end
 % Measure from the frame/mount: bed to the sensor on the Aquadopp head.
 switch adcpLoc
     case 'NorthADCP'
-        cfg.p_sensor_hab = 0.20;   % <-- AQD5459: replace with measured value
+        cfg.p_sensor_hab = 0.00;   % <-- AQD5459: replace with measured value
     case 'SouthADCP'
         cfg.p_sensor_hab = 0.00;   % <-- AQD2710 / AQD13862: replace
 end

@@ -242,6 +242,7 @@ pairs.i = ci;
 pairs.drifter_V  = [ROI_ADCP(hasCross).avg_V]';
 pairs.drifter_VE = [ROI_ADCP(hasCross).avg_ve]';
 pairs.drifter_VN = [ROI_ADCP(hasCross).avg_vn]';
+pairs.drifter_dx = arrayfun(@(r) mean(r.East, 'omitnan'), ROI_ADCP(hasCross))' - E_loc;  % mean east offset from ADCP (m), + = east
 
 comps = {'V', 'VE', 'VN'};
 fprintf('\n%s: %d ROI crossings (ROI radius %g m, %.2f m below surface)\n', ...

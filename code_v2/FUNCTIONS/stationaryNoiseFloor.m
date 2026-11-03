@@ -372,11 +372,11 @@ end
 h1 = loglog(windows, 100*mean(F.meanSpd,1,'omitnan'), 'k-o', 'LineWidth', 2);
 h2 = loglog(windows, 100*mean(F.rmsSpd,1,'omitnan'),  'b-o', 'LineWidth', 2);
 h3 = loglog(windows, 100*p95pool,                     'r-o', 'LineWidth', 2);
-h4 = loglog(windows, 100*mean(F.meanSpd(:,1),'omitnan')*windows(1)./windows, 'k--');
+h4 = loglog(windows, 100*mean(F.rmsSpd(:,1),'omitnan')*sqrt(windows(1)./windows), 'k--');       % 1/sqrt(window), anchored to the RMS curve at 2 s
 set(gca,'XScale','log','YScale','log'); grid on
 xlabel('Window length (s)'); ylabel('Apparent speed of non-moving drifters (cm/s)')
 legend([h1 h2 h3 h4], 'Mean speed','RMS speed','95th percentile (pooled)', ...
-    '1/window scaling (pure white noise)', 'Location','southwest')
+    '1/\surd(window) scaling', 'Location','southwest')
 % title('Velocity noise floor vs window length')
 
 figure('Name','StationaryDep_error_autocorrelation'); hold on
@@ -394,7 +394,7 @@ lagS = (0:maxLag)';
 for sp = 1:2
     subplot(1,2,sp); hold on
     hA = plot(lagS, mean(rV1,2),  'b', 'LineWidth', 2);
-    hB = plot(lagS, mean(rV8,2),  'r', 'LineWidth', 2);
+%     hB = plot(lagS, mean(rV8,2),  'r', 'LineWidth', 2);
     hC = plot(lagS, mean(rDop,2), 'k', 'LineWidth', 2);
     hD = plot(lagS, mean(0.5*(rE+rN),2), '--', 'Color', [0.5 0.5 0.5], 'LineWidth', 2);
     yline(exp(-1),':'); yline(0,'-','Color',[0.8 0.8 0.8]);
@@ -402,7 +402,9 @@ for sp = 1:2
     xlabel('Lag (s)'); ylabel('Autocorrelation')
     if sp == 1
         xlim([0 60]); title('First minute')
-        legend([hA hB hC hD], 'Position velocity, 1 s', 'Position velocity, 8 s window', ...
+%         legend([hA hB hC hD], 'Position velocity, 1 s', 'Position velocity, 8 s window', ...
+%             'GPS Doppler speed', 'Position error', 'Location','northeast')
+        legend([hA hC hD], 'Position velocity, 1 s', ...
             'GPS Doppler speed', 'Position error', 'Location','northeast')
     else
         xlim([0 maxLag]); title('Full lag range')
