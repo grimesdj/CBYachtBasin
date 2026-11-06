@@ -338,6 +338,34 @@ switch [obsPeriod, adcpLoc]
         cfg.adcp_input_file = 'CB_S701';
         
         
+        
+        case { ['FallFlood 110426 SHEET', 'NorthADCP'] }
+        
+        cfg.name = 'FallFlood_102826_sheet';
+        cfg.sheet_file_suffix = '_v3';      % later sheet periods read the data_XX_v2.xlsx files
+        
+        cfg.root_data = [cfg.root_data, 'FallFlood\'];
+        
+        cfg.drifters_raw_dir = cfg.sheet_data_dir;    % not read on the sheet route; sheet files come from cfg.sheet_data_dir
+        cfg.drifters_dep_times = [cfg.root_data ,'DRIFTERS\DATA\Deployment_110426\Dep_times\Dep_10_times.xlsx'];
+        
+        cfg.adcp_input_dir = [cfg.root_data, 'AQD5459\'];
+        cfg.adcp_input_file = 'CB_N701';
+        
+     case { ['FallFlood 110426 SHEET', 'SouthADCP'] }
+        
+        cfg.name = 'FallFlood_102826_sheet';
+        cfg.sheet_file_suffix = '_v3';
+        
+        cfg.root_data = [cfg.root_data, 'FallFlood\'];
+        
+        cfg.drifters_raw_dir = cfg.sheet_data_dir;
+        cfg.drifters_dep_times = [cfg.root_data ,'DRIFTERS\DATA\Deployment_110426\Dep_times\Dep_10_times.xlsx'];
+        
+        cfg.adcp_input_dir = [cfg.root_data, 'AQD2710\'];
+        cfg.adcp_input_file = 'CB_S701';
+        
+        
         case { ['ALL', 'NorthADCP'] }
         
         cfg.name = 'ALL_OBS_PERIODS';

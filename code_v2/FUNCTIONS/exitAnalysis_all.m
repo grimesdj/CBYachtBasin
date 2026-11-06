@@ -128,6 +128,7 @@ end
 
 %% Surface current U at the moment of each mouth exit
 smooth_samples = 2;   % number of ADCP samples averaged to smooth U (about 20 min)
+drogue_depth = 0.5;
 tbl.ExitDatenum = datenum(tbl.ReleaseTime + seconds(tbl.ExitTime));   % clock time of each exit, as a number
 tbl.ExitU = nan(height(tbl),1);                                       % U at each exit (filled in below)
 
@@ -138,9 +139,20 @@ for i = 1:numel(names)
     adcpName = erase(names{i},'_sheet');   % ADCP files do not have _sheet in the name
     A1 = load(fullfile(adcpDir,[adcpName '_NorthADCP_adcp_level_1.mat'])).adcp_level_1;
     A2 = load(fullfile(adcpDir,[adcpName '_NorthADCP_adcp_level_2.mat'])).adcp_level_2;
+%     tADCP = A1.time(:);                                                    % times of the ADCP profiles
+%     Usurf = movmean(A2.U_mapped(end,:)', smooth_samples, 'omitnan');      % smoothed surface U at those times
+%     tbl.ExitU(sel) = interp1(tADCP, Usurf, tbl.ExitDatenum(sel));         % U at the exit times
     tADCP = A1.time(:);                                                    % times of the ADCP profiles
-    Usurf = movmean(A2.U_mapped(end,:)', smooth_samples, 'omitnan');      % smoothed surface U at those times
-    tbl.ExitU(sel) = interp1(tADCP, Usurf, tbl.ExitDatenum(sel));         % U at the exit times
+    zTarget = 1 - drogue_depth ./ A2.h(:);                                 % z/h of the point 0.5 m below the surface at each time (A2.h = water depth, m)
+    Uz = nan(numel(tADCP),1);                                              % U at that depth, one value per ADCP time
+    for m = 1:numel(tADCP)
+        if ~isnan(zTarget(m)) && zTarget(m) >= 0 && any(~isnan(A2.U_recon(m,:)))
+            Uz(m) = interp1(A2.zonh_grid, A2.U_recon(m,:), zTarget(m));    % EOF-reconstructed U at that z/h
+        end
+    end
+    Usurf = movmean(Uz, smooth_samples, 'omitnan');                        % smoothed U at those times
+    tbl.ExitU(sel) = interp1(tADCP, Usurf, tbl.ExitDatenum(sel));          % U at the exit times
+
 end
 
 fprintf('\nSurface current U at each mouth exit (negative = ebb, toward the mouth):\n');

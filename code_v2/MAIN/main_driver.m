@@ -15,7 +15,7 @@ root_dir = 'C:\Users\bcm3620\OneDrive - UNC-Wilmington\THESIS\CBYachtBasin\'; % 
 
 
 %% Choose the observation period
-obsPeriod = 'JuneJamboree';
+obsPeriod = 'FallFlood 110426 SHEET';
 % Options: 
 % 'MarshMadness' *South ADCP was HR (ONLY SAMPLED HALF WATER COLUMN*
 % 'MarshMayhem' *South ADCP was HR (ONLY SAMPLED HALF WATER COLUMN*
@@ -29,6 +29,8 @@ obsPeriod = 'JuneJamboree';
 % 'FallFlood 093026' *ADCP data not available'
 % 'FallFlood 102826' *ADCP data not available'
 % 'FallFlood 102826 SHEET' *ADCP data not available'
+% 'FallFlood 110426' *ADCP data not available'
+% 'FallFlood 110426 SHEET' *ADCP data not available'
 % 'ALL' **THIS IS FOR ALL OBS-PERIOD ANALYSIS, NOT INTENDED FOR INTIAL PP**
 % 'StationaryDep' ** This is for drifter measurement error analysis **
 

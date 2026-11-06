@@ -38,7 +38,7 @@ names   = {'MarshMadness','MarshMayhem','FallFrolic_100825','FallFrolic_101025',
 folders = {'MarshMadness','MarshMayhem','FallFrolic','FallFrolic','NovDep','JuneJamboree','SummerFlood'};
 
 roots = {'C:\Users\Ben\OneDrive - UNC-Wilmington\', ...
-         'C:\Users\bcm3620\OneDrive - UNC-Wilmington\'};
+    'C:\Users\bcm3620\OneDrive - UNC-Wilmington\'};
 k = find(cellfun(@(r) isfolder(fullfile(r,'CB_YachtBasin')), roots), 1);
 if isempty(k), error('Neither root path contains CB_YachtBasin on this machine.'); end
 root_data = roots{k};
@@ -48,18 +48,18 @@ save_dir = fullfile(root_data,'THESIS','THESIS_DRAFTING','FIGURES','STUCK_DRIFTE
 if ~isfolder(save_dir), mkdir(save_dir); end
 
 %% Load every track
-TR = struct('Period',{},'Deployment',{},'Track',{},'ID',{},'t',{},'x',{},'y',{},'spd',{},'reg',{},'ph',{});
+TR = struct('Period',{},'Deployment',{},'Track',{},'ID',{},'t',{},'x',{},'y',{},'spd',{},'reg',{},'ph',{},'stk',{});
 dtWarn = false;
 
 for i = 1:numel(names)
-
+    
     fn = fullfile(root_data,'CB_YachtBasin',folders{i},'PROCESSED_DATA_V2','DRIFTERS', ...
         [names{i} '_drifters_level_2.mat']);
     if ~isfile(fn)
         warning('%s: file not found, skipped', names{i});
         continue
     end
-
+    
     S = load(fn);
     if isfield(S,'drifters_level_2')
         L2 = S.drifters_level_2;
@@ -69,7 +69,7 @@ for i = 1:numel(names)
         warning('%s: no drifters_level_2 or trimmed variable, skipped', names{i});
         continue
     end
-
+    
     [nD,nC] = size(L2);
     for d = 1:nD
         for c = 1:nC
@@ -77,7 +77,7 @@ for i = 1:numel(names)
             if isempty(D.East) || isempty(D.North) || isempty(D.Date_and_time) || isempty(D.Speed)
                 continue
             end
-
+            
             t   = seconds(D.Date_and_time(:) - D.Date_and_time(1));
             x   = D.East(:);
             y   = D.North(:);
@@ -87,27 +87,33 @@ for i = 1:numel(names)
             else
                 reg = nan(size(x));
             end
-
-            n = min([numel(t) numel(x) numel(y) numel(spd) numel(reg)]);
+            
+            if ~isfield(D,'Stuck') || numel(D.Stuck) ~= numel(D.East)
+                error('%s has no usable Stuck field in level 2. Run flagStuckDrifters first.', names{i});
+            end
+            stk = logical(D.Stuck(:));           % the flag flagStuckDrifters wrote into level 2
+            
+            n = min([numel(t) numel(x) numel(y) numel(spd) numel(reg) numel(stk)]);
             if n < 2, continue, end
-            t = t(1:n); x = x(1:n); y = y(1:n); spd = spd(1:n); reg = reg(1:n);
-
+            t = t(1:n); x = x(1:n); y = y(1:n); spd = spd(1:n); reg = reg(1:n); stk = stk(1:n);
+            
             ph = strings(n,1);
             if isfield(D,'TidePhase') && ~isempty(D.TidePhase)
                 pp = string(D.TidePhase(:));
                 m  = min(n, numel(pp));
                 ph(1:m) = pp(1:m);
             end
-
+            
             if abs(median(diff(t)) - 1) > 0.2, dtWarn = true; end
-
+            
             if isfield(D,'ID') && ~isempty(D.ID), id = D.ID; else, id = NaN; end
-
+            
             TR(end+1) = struct('Period',i,'Deployment',d,'Track',c,'ID',id, ...
-                't',t,'x',x,'y',y,'spd',spd,'reg',reg,'ph',ph); %#ok<AGROW>
+                't',t,'x',x,'y',y,'spd',spd,'reg',reg,'ph',ph,'stk',stk); %#ok<AGROW>        end
         end
     end
 end
+
 
 nT = numel(TR);
 fprintf('\nLoaded %d tracks.\n', nT);
@@ -121,27 +127,27 @@ minRun = round(min_run_min*60);
 %% Flag stuck samples and summarise each track
 Flag = cell(nT,1);
 rows = struct('Period',{},'Deployment',{},'ID',{},'Duration_h',{},'StuckPct',{}, ...
-              'TrailingStuck_h',{},'MidTrackStuck_h',{},'NRuns',{},'StuckRegion',{});
+    'TrailingStuck_h',{},'MidTrackStuck_h',{},'NRuns',{},'StuckRegion',{});
 
 for q = 1:nT
     T = TR(q);
-    f = stuckFlag(T.x, T.y, T.spd, W, radius_m, dop_max, minRun);
+    f = T.stk;                           % Stuck flag from level 2 (flagStuckDrifters)
     Flag{q} = f;
-
+    
     n   = numel(f);
     dur = T.t(end)/3600;
     [s,e] = runs(f);
-
+    
     trail = 0;
     if ~isempty(e) && e(end) == n
         trail = (T.t(e(end)) - T.t(s(end)))/3600;
     end
     stuckH = sum(f) * median(diff(T.t)) / 3600;
-
+    
     sr = NaN;
     m = f & ~isnan(T.reg);
     if any(m), sr = mode(T.reg(m)); end
-
+    
     rows(end+1) = struct('Period',string(strrep(names{T.Period},'_',' ')), 'Deployment',T.Deployment, ...
         'ID',T.ID, 'Duration_h',dur, 'StuckPct',100*sum(f)/n, ...
         'TrailingStuck_h',trail, 'MidTrackStuck_h',max(stuckH - trail,0), ...
@@ -325,7 +331,7 @@ title(ax2,'Phase when stuck runs start and end');
 saveFig(f3, save_dir, 'StuckDrifters_byPhase');
 
 %% Save flags for later use
-Meta = rmfield(TR, {'t','x','y','spd','reg','ph'});
+Meta = rmfield(TR, {'t','x','y','spd','reg','ph','stk'});
 Time = {TR.t}';
 save(fullfile(save_dir,'StuckDrifters_flags.mat'), 'Flag','Meta','Time','names', ...
     'win_min','radius_m','dop_max','min_run_min','-v7.3');

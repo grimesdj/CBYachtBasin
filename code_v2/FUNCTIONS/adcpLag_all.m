@@ -79,9 +79,20 @@ for i = 1:numel(obsNames)
 
     %% Near-surface current
 
-    nearSurfaceCurrent = ...
-        adcp_curr.U_mapped(end,:)';
+%     nearSurfaceCurrent = ...
+%         adcp_curr.U_mapped(end,:)';
 
+    %% Near-surface current (EOF-reconstructed U at the drogue depth)
+
+    drogue_depth = 0.5;                                      % m below the surface where the drifter drogue is centered
+
+    zTarget = 1 - drogue_depth ./ adcp_curr.h(:);            % z/h of the point 0.5 m below the surface at each time
+    nearSurfaceCurrent = nan(numel(zTarget),1);              % U at that depth, one value per ADCP time
+    for m = 1:numel(zTarget)
+        if ~isnan(zTarget(m)) && zTarget(m) >= 0 && any(~isnan(adcp_curr.U_recon(m,:)))
+            nearSurfaceCurrent(m) = interp1(adcp_curr.zonh_grid, adcp_curr.U_recon(m,:), zTarget(m));
+        end
+    end
     %% Format data
 
     time = time(:);
