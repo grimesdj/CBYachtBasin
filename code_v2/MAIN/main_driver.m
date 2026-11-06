@@ -30,7 +30,7 @@ obsPeriod = 'JuneJamboree';
 % 'FallFlood 102826' *ADCP data not available'
 % 'FallFlood 102826 SHEET' *ADCP data not available'
 % 'ALL' **THIS IS FOR ALL OBS-PERIOD ANALYSIS, NOT INTENDED FOR INTIAL PP**
-% 'StationaryDep' ** This is for drifter position error analysis **
+% 'StationaryDep' ** This is for drifter measurement error analysis **
 
 %% Choose North or South ADCP for analysis
 adcpLoc = 'NorthADCP';

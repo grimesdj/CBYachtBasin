@@ -24,7 +24,7 @@ sheet_dir = 'C:\Users\bcm3620\OneDrive - UNC-Wilmington\CB_YachtBasin\Archived_S
 use_v2 = false;
 
 % Label used in plot titles (e.g. 'IOP4')
-plot_label = 'IOP4';
+plot_label = 'BHI';
 
 % Loose pre-filter: before the deployment trimming, keep only each drifter's
 % data from (its earliest drop - buffer) to (its latest pull + buffer).
@@ -108,7 +108,8 @@ for k = 1:maxID
     end
     dnum = floor(datenum(table2array(T(:,1))));   % date of each post as a datenum
     lat  = table2array(T(:,4));                   % latitude as posted (ddmm.mmmm)
-    lon  = table2array(T(:,6));                   % longitude as posted
+    lon  = table2array(T(:,6));
+    spd  = table2array(T(:,9));                   % speed as posted (knots)% longitude as posted
  
     % --- Loose time pre-filter around this drifter's deployments ---
     this_dep = deployments.drifter_id == k;
@@ -125,12 +126,13 @@ for k = 1:maxID
     secs = secs(keep);
     lat  = lat(keep);
     lon  = lon(keep);
+    spd = spd(keep);
  
     bad = lat == 0 | lon == 0 | isnan(lat) | isnan(lon) | isnan(dnum) | isnan(secs) | dnum > datenum(today);
     [lat, lon] = convertToDecimalDegrees(lat, lon);   % decimal degrees
     lat(bad) = 0;  lon(bad) = 0;              % zeroed points become NaN below
  
-    Sheet_values.(fname) = [dnum(:) secs(:) lat(:) lon(:)];
+    Sheet_values.(fname) = [dnum(:) secs(:) lat(:) lon(:) spd(:)];
 end
 
  
@@ -178,13 +180,16 @@ for i = 1:numel(fn)
     drifters(i).v_e           = V_e;
     drifters(i).v_n           = V_n;
     drifters(i).V             = V;
-    drifters(i).Speed         = nan(size(Lat));   % not in sheet data; trimmer expects the field
+    drifters(i).Speed         = drifterData(:,5);   % not in sheet data; trimmer expects the field
     drifters(i).Alt           = nan(size(Lat));
     drifters(i).Angle         = nan(size(Lat));
     drifters(i).Volt          = nan(size(Lat));
 end
 
-raw_drifters = drifters; %for VeloQAQC (in code_v2\FUNCTIONS)
+raw_drifters = drifters(ismember([drifters.ID], deployments.drifter_id));   % only drifters in the deployment log
+for i = 1:numel(raw_drifters)
+    raw_drifters(i).Date_and_time = datetime(raw_drifters(i).Date_and_time, 'ConvertFrom', 'datenum');   % veloQAQC expects datetimes
+end
  
 %% Trim the drifters to when they were in the water
 trimmed = trimDrifterDataByDeployment_old(drifters, deployments);

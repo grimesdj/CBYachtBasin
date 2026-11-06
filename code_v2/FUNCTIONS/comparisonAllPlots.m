@@ -31,6 +31,7 @@ for c = 1:3
     end
 end
 period = strings(0,1);
+dx = zeros(0,1);
 
 for n = 1:numel(P)
     C = loadPeriodComp(cfg.root_data, P(n));
@@ -46,6 +47,7 @@ for n = 1:numel(P)
         end
     end
     period = [period; repmat(string(P(n).obsTag), m, 1)]; %#ok<AGROW>
+    dx = [dx; pr.drifter_dx(:)]; %#ok<AGROW>
 end
 
 if isempty(period)
@@ -73,6 +75,13 @@ for p = 1:3
 end
 ALL.RMSE_Table = array2table(rmseVals, 'VariableNames', comps, 'RowNames', prods);
 
+W = dx < 0;  E = dx >= 0;
+stW = pairStats(Dr.V(W), Ad.ADCP.V(W));
+stE = pairStats(Dr.V(E), Ad.ADCP.V(E));
+fprintf('|V| west of ADCP: n=%d  bias=%.3f  RMSE=%.3f\n', stW.n, stW.bias, stW.rmse);
+fprintf('|V| east of ADCP: n=%d  bias=%.3f  RMSE=%.3f\n', stE.n, stE.bias, stE.rmse);
+disp(table(period(W), dx(W), Dr.V(W), Ad.ADCP.V(W), 'VariableNames', {'period','dx','drifter','ADCP'}))
+
 %% Per-period breakdown for |V|
 tags = unique(period, 'stable');
 vals = nan(numel(tags), 9);
@@ -93,6 +102,7 @@ disp(ALL.byPeriod_V)
 
 %% Store paired data
 ALL.period  = period;
+ALL.dx = dx;
 ALL.drifter = Dr;
 for p = 1:3
     ALL.(prods{p}) = Ad.(prods{p});
@@ -111,57 +121,88 @@ cl = {'r', 'b', 'g'};
 compName = {'|V|', 'u (east)', 'v (north)'};
 
 %% One figure per product (markers = component)
-for p = 1:3
-    f = figure; hold on
-    for c = 1:3
-        st = ALL.stats.(prods{p}).(comps{c});
-        scatter(Dr.(comps{c}), Ad.(prods{p}).(comps{c}), 36, cl{c}, mk{c}, 'filled', ...
-            'DisplayName', sprintf('%s  r=%.2f  bias=%.3f  RMSE=%.3f  n=%d', ...
-            compName{c}, st.r, st.bias, st.rmse, st.n));
-    end
-    plot([-L L], [-L L], 'k', 'DisplayName', '1:1 line');
-    hold off
-    axis equal; xlim([-L L]); ylim([-L L]); grid on
-    legend('Location', 'best')
-    xlabel('Drifter Velocities (m/s)'); ylabel('ADCP Velocities (m/s)');
-    title([titles{p} ' - ALL OBSERVATION PERIODS']);
-    saveFig(f, cfg, ['ALL_' files{p} '_all_obs']);
-end
+% for p = 1:3
+%     f = figure; hold on
+%     for c = 1:3
+%         st = ALL.stats.(prods{p}).(comps{c});
+%         scatter(Dr.(comps{c}), Ad.(prods{p}).(comps{c}), 36, cl{c}, mk{c}, 'filled', ...
+%             'DisplayName', sprintf('%s  r=%.2f  bias=%.3f  RMSE=%.3f  n=%d', ...
+%             compName{c}, st.r, st.bias, st.rmse, st.n));
+%     end
+%     plot([-L L], [-L L], 'k', 'DisplayName', '1:1 line');
+%     hold off
+%     axis equal; xlim([-L L]); ylim([-L L]); grid on
+%     legend('Location', 'best')
+%     xlabel('Drifter Velocities (m/s)'); ylabel('ADCP Velocities (m/s)');
+%     title([titles{p} ' - ALL OBSERVATION PERIODS']);
+%     saveFig(f, cfg, ['ALL_' files{p} '_all_obs']);
+% end
 
 %% Products side by side, one panel per component
-f = figure;
-for c = 1:3
-    ax = subplot(1,3,c); hold(ax, 'on')
-    for p = 1:3
-        scatter(ax, Dr.(comps{c}), Ad.(prods{p}).(comps{c}), 30, cl{p}, mk{p}, 'filled', ...
-            'DisplayName', prods{p});
-    end
-    plot(ax, [-L L], [-L L], 'k', 'DisplayName', '1:1 line');
-    hold(ax, 'off'); axis(ax, 'equal'); xlim(ax, [-L L]); ylim(ax, [-L L]); grid(ax, 'on')
-    title(ax, compName{c}); xlabel(ax, 'Drifter (m/s)');
-    if c == 1, ylabel(ax, 'ADCP product (m/s)'); legend(ax, 'Location', 'best'); end
-end
-sgtitle('ALL OBSERVATION PERIODS - products compared');
-saveFig(f, cfg, 'ALL_products_by_component');
+% f = figure;
+% for c = 1:3
+%     ax = subplot(1,3,c); hold(ax, 'on')
+%     for p = 1:3
+%         scatter(ax, Dr.(comps{c}), Ad.(prods{p}).(comps{c}), 30, cl{p}, mk{p}, 'filled', ...
+%             'DisplayName', prods{p});
+%     end
+%     plot(ax, [-L L], [-L L], 'k', 'DisplayName', '1:1 line');
+%     hold(ax, 'off'); axis(ax, 'equal'); xlim(ax, [-L L]); ylim(ax, [-L L]); grid(ax, 'on')
+%     title(ax, compName{c}); xlabel(ax, 'Drifter (m/s)');
+%     if c == 1, ylabel(ax, 'ADCP product (m/s)'); legend(ax, 'Location', 'best'); end
+% end
+% sgtitle('ALL OBSERVATION PERIODS - products compared');
+% saveFig(f, cfg, 'ALL_products_by_component');
 
 %% |V| coloured by observation period, one panel per product
-f = figure;
-cmap = lines(numel(tags));
-for p = 1:3
-    ax = subplot(1,3,p); hold(ax, 'on')
-    for t = 1:numel(tags)
-        idx = period == tags(t);
-        scatter(ax, Dr.V(idx), Ad.(prods{p}).V(idx), 30, cmap(t,:), 'filled', ...
-            'DisplayName', strrep(char(tags(t)), '_', '\_'));
-    end
-    plot(ax, [0 L], [0 L], 'k', 'DisplayName', '1:1 line');
-    hold(ax, 'off'); axis(ax, 'equal'); xlim(ax, [0 L]); ylim(ax, [0 L]); grid(ax, 'on')
-    title(ax, [prods{p} ' |V|']); xlabel(ax, 'Drifter |V| (m/s)');
-    if p == 1, ylabel(ax, 'ADCP |V| (m/s)'); end
-    if p == 3, legend(ax, 'Location', 'bestoutside'); end
+% f = figure;
+% cmap = lines(numel(tags));
+% for p = 1:3
+%     ax = subplot(1,3,p); hold(ax, 'on')
+%     for t = 1:numel(tags)
+%         idx = period == tags(t);
+%         scatter(ax, Dr.V(idx), Ad.(prods{p}).V(idx), 30, cmap(t,:), 'filled', ...
+%             'DisplayName', strrep(char(tags(t)), '_', '\_'));
+%     end
+%     plot(ax, [0 L], [0 L], 'k', 'DisplayName', '1:1 line');
+%     hold(ax, 'off'); axis(ax, 'equal'); xlim(ax, [0 L]); ylim(ax, [0 L]); grid(ax, 'on')
+%     title(ax, [prods{p} ' |V|']); xlabel(ax, 'Drifter |V| (m/s)');
+%     if p == 1, ylabel(ax, 'ADCP |V| (m/s)'); end
+%     if p == 3, legend(ax, 'Location', 'bestoutside'); end
+% end
+% sgtitle('|V| by observation period');
+% saveFig(f, cfg, 'ALL_speed_by_period');
+
+%% Drifter vs ADCP top valid bin, coloured by east-west offset from ADCP
+p = 1;                                   % 'ADCP' = top reliable bin
+f = figure; hold on
+for c = 1:3
+    st = ALL.stats.(prods{p}).(comps{c});
+    % data points, coloured by offset (hidden from legend)
+    scatter(Dr.(comps{c}), Ad.(prods{p}).(comps{c}), 48, dx, mk{c}, 'filled', ...
+        'MarkerEdgeColor', 'k', 'HandleVisibility', 'off');
+    % grey dummy marker so the legend shows shape, not colour
+    plot(nan, nan, mk{c}, 'MarkerFaceColor', [0.7 0.7 0.7], 'MarkerEdgeColor', 'k', ...
+        'LineStyle', 'none', 'DisplayName', sprintf('%s  RMSE = %.3f m/s', compName{c}, st.rmse));
 end
-sgtitle('|V| by observation period');
-saveFig(f, cfg, 'ALL_speed_by_period');
+plot([-L L], [-L L], 'k', 'DisplayName', '1:1 line');
+hold off
+axis equal; xlim([-L L]); ylim([-L L]); grid on
+
+% diverging colormap: blue = west of ADCP, white = at ADCP, red = east (docks)
+nC = 128;
+bwr = [linspace(0,1,nC)' linspace(0,1,nC)' ones(nC,1); ...
+       ones(nC,1) linspace(1,0,nC)' linspace(1,0,nC)'];
+colormap(f, bwr)
+D = max(abs(dx), [], 'omitnan');
+caxis([-D D])                             % use caxis([-D D]) on MATLAB older than R2022a
+cb = colorbar;
+cb.Label.String = 'Drifter offset from ADCP (m; + east, − west)';
+
+legend('Location', 'best')
+xlabel('Drifter Velocities (m/s)'); ylabel('ADCP Velocities (m/s)');
+% title('ADCP OBSERVATIONS (top reliable bin) - coloured by east-west offset');
+saveFig(f, cfg, 'ALL_adcp_by_EW_offset');
 
 end
 
