@@ -1,17 +1,21 @@
 clear all
 close all
 %% Where is the data?
-rootDir = '~/OneDriveUNCW/DATA/CB_YachtBasin/JuneJamboree/'
+rootDir = '~/OneDriveUNCW/DATA/CB_YachtBasin/SummerFlood/'
 L0Dir  = [rootDir,'PROCESSED_DATA',filesep,'CTD',filesep];
 %% RBR-CTD+F:
 ctdSerialNumber = 230442;
 rbrFile = dir(sprintf('%sRBR/%d_*.rsk',rootDir,ctdSerialNumber));
 %% Locsys GT-31 GPS:
-gpsFile = [rootDir,'GPS/GPSUSER05_133200472_20260614_110619.TXT'];
+gpsFile = [rootDir,'GPS/GPSUSER05_133200472_20260811_132737.TXT'];
 
 %% Output file:
-fout = [L0Dir,filesep,num2str(ctdSerialNumber),'_casts_L0.mat'];
+fout0 = [L0Dir,filesep,num2str(ctdSerialNumber),'_casts_L0.mat'];
+fout = [L0Dir,filesep,num2str(ctdSerialNumber),'_CTDF_L0.mat'];
 
+if ~exist(L0Dir,'dir')
+    eval(['!mkdir -p ',L0Dir])
+end
 
 
 %% get the GPS data
@@ -42,6 +46,9 @@ gps.geoidsep=geoidsep(valid);
 gps.pdop=pdop(valid);
 gps.hdop=hdop(valid);
 gps.vdop=vdop(valid);
+% remove duplicate times (half second)
+idt = find(diff(gps.time_utc)==0);
+gps.time_utc(idt+1)=gps.time_utc(idt+1)+0.5/86400;
 %% convert to EDT
 gps.time = gps.time_utc-4/24;
 
@@ -64,7 +71,7 @@ turb_raw  = data(:,6);
 salt      = data(:,9);
 
 %% Atmospheric Pressure offset
-ATM_Time = [datenum('14-June-2026 12:50:00'), datenum('14-June-2026 13:00:00')];
+ATM_Time = [datenum('11-Aug-2026 15:35:00'), datenum('11-Aug-2026 15:48:00')];
 inAir  = find(time>=ATM_Time(1) & time<=ATM_Time(2));
 pres0 = mean(pres_abs(inAir));
 pres  = pres_abs-pres0;
@@ -109,11 +116,11 @@ for jj = 1:Ncasts
     this_cast = find(downcast>=cast_start(jj) & downcast<=cast_end(jj));
     [~,inds]  = unique(pres(downcast(this_cast)));
     time_grid(1,jj) = time(downcast(this_cast(inds(1))));
-    try latitude_grid(1,jj)  = interp1(gps(1).time,gps(1).latitude,time_grid(1,jj));
+    try latitude_grid(1,jj)  = interp1(gps(1).time_utc,gps(1).latitude,time_grid(1,jj));
     catch
         latitude_grid(1,jj)  = nan;
     end
-    try longitude_grid(1,jj) = interp1(gps(1).time,gps(1).longitude,time_grid(1,jj));
+    try longitude_grid(1,jj) = interp1(gps(1).time_utc,gps(1).longitude,time_grid(1,jj));
     catch
         longitude_grid(1,jj) = nan;
     end
@@ -143,5 +150,21 @@ end
 % save gridded data to netcdf files
 CTD = struct('Time',time_grid,'Latitude',latitude_grid,'Longitude',longitude_grid,'Pressure',pres_grid,'CHLa',chla_grid,'FDOM',fdom_grid,'NTU',turb_grid,'Temperature',temp_grid,'Conductivity',cond_grid,'Salinity',salt_grid)
 %
+%
+density = gsw_rho(CTD.Salinity,CTD.Temperature,CTD.Pressure*ones(1,size(CTD.Temperature,2)));
+CTD.Density = density;
+%
 % archive raw and gridded data
-save(fout,'time','cond','temp','pres','salt','chla_raw','fdom_raw','turb_raw','gps','time_grid','pres_grid','temp_grid','cond_grid','salt_grid','chla_grid','turb_grid','fdom_grid','latitude_grid','longitude_grid','pres0')
+save(fout0,'time','cond','temp','pres','salt','density','chla_raw','fdom_raw','turb_raw','gps','time_grid','pres_grid','temp_grid','cond_grid','salt_grid','chla_grid','turb_grid','fdom_grid','latitude_grid','longitude_grid','pres0')
+
+
+figure,
+imagesc(datetime(CTD.Time,'convertFrom','datenum'),CTD.Pressure,CTD.Temperature)
+
+figure,
+imagesc(datetime(CTD.Time,'convertFrom','datenum'),CTD.Pressure,CTD.Salinity)
+
+figure,
+imagesc(datetime(CTD.Time,'convertFrom','datenum'),CTD.Pressure,CTD.Density)
+
+save(fout,'-struct','CTD')

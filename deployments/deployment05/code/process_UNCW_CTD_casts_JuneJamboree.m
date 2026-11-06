@@ -10,9 +10,10 @@ rbrFile = dir(sprintf('%sRBR/%d_*.rsk',rootDir,ctdSerialNumber));
 gpsFile = [rootDir,'GPS/GPSUSER05_133200472_20260614_110619.TXT'];
 
 %% Output file:
-fout = [L0Dir,filesep,num2str(ctdSerialNumber),'_casts_L0.mat'];
+fout0 = [L0Dir,filesep,num2str(ctdSerialNumber),'_casts_L0.mat'];
+fout  = [L0Dir,filesep,num2str(ctdSerialNumber),'_CTDF_L0.mat'];
 
-
+disp('CTD was programmed in EDT')
 
 %% get the GPS data
 gps_dir = dir(gpsFile);
@@ -42,8 +43,11 @@ gps.geoidsep=geoidsep(valid);
 gps.pdop=pdop(valid);
 gps.hdop=hdop(valid);
 gps.vdop=vdop(valid);
+% remove duplicate times (half second)
+idt = find(diff(gps.time_utc)==0);
+gps.time_utc(idt+1)=gps.time_utc(idt+1)+0.5/86400;
 %% convert to EDT
-gps.time = gps.time_utc-4/24;
+gps.time_edt = gps.time_utc-4/24;
 
 
 %% open the RBR file
@@ -109,11 +113,11 @@ for jj = 1:Ncasts
     this_cast = find(downcast>=cast_start(jj) & downcast<=cast_end(jj));
     [~,inds]  = unique(pres(downcast(this_cast)));
     time_grid(1,jj) = time(downcast(this_cast(inds(1))));
-    try latitude_grid(1,jj)  = interp1(gps(1).time,gps(1).latitude,time_grid(1,jj));
+    try latitude_grid(1,jj)  = interp1(gps(1).time_edt,gps(1).latitude,time_grid(1,jj));
     catch
         latitude_grid(1,jj)  = nan;
     end
-    try longitude_grid(1,jj) = interp1(gps(1).time,gps(1).longitude,time_grid(1,jj));
+    try longitude_grid(1,jj) = interp1(gps(1).time_edt,gps(1).longitude,time_grid(1,jj));
     catch
         longitude_grid(1,jj) = nan;
     end
@@ -143,5 +147,20 @@ end
 % save gridded data to netcdf files
 CTD = struct('Time',time_grid,'Latitude',latitude_grid,'Longitude',longitude_grid,'Pressure',pres_grid,'CHLa',chla_grid,'FDOM',fdom_grid,'NTU',turb_grid,'Temperature',temp_grid,'Conductivity',cond_grid,'Salinity',salt_grid)
 %
+%
+density = gsw_rho(CTD.Salinity,CTD.Temperature,CTD.Pressure*ones(1,size(CTD.Temperature,2)));
+CTD.Density = density;
+%
 % archive raw and gridded data
-save(fout,'time','cond','temp','pres','salt','chla_raw','fdom_raw','turb_raw','gps','time_grid','pres_grid','temp_grid','cond_grid','salt_grid','chla_grid','turb_grid','fdom_grid','latitude_grid','longitude_grid','pres0')
+save(fout0,'time','cond','temp','pres','salt','density','chla_raw','fdom_raw','turb_raw','gps','time_grid','pres_grid','temp_grid','cond_grid','salt_grid','chla_grid','turb_grid','fdom_grid','latitude_grid','longitude_grid','pres0')
+
+figure,
+imagesc(datetime(CTD.Time,'convertFrom','datenum'),CTD.Pressure,CTD.Temperature)
+
+figure,
+imagesc(datetime(CTD.Time,'convertFrom','datenum'),CTD.Pressure,CTD.Salinity)
+
+figure,
+imagesc(datetime(CTD.Time,'convertFrom','datenum'),CTD.Pressure,CTD.Density)
+
+save(fout,'-struct','CTD')
