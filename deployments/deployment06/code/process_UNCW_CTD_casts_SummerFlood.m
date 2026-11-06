@@ -46,6 +46,9 @@ gps.geoidsep=geoidsep(valid);
 gps.pdop=pdop(valid);
 gps.hdop=hdop(valid);
 gps.vdop=vdop(valid);
+% remove duplicate times (half second)
+idt = find(diff(gps.time_utc)==0);
+gps.time_utc(idt+1)=gps.time_utc(idt+1)+0.5/86400;
 %% convert to EDT
 gps.time = gps.time_utc-4/24;
 
@@ -113,11 +116,11 @@ for jj = 1:Ncasts
     this_cast = find(downcast>=cast_start(jj) & downcast<=cast_end(jj));
     [~,inds]  = unique(pres(downcast(this_cast)));
     time_grid(1,jj) = time(downcast(this_cast(inds(1))));
-    try latitude_grid(1,jj)  = interp1(gps(1).time,gps(1).latitude,time_grid(1,jj));
+    try latitude_grid(1,jj)  = interp1(gps(1).time_utc,gps(1).latitude,time_grid(1,jj));
     catch
         latitude_grid(1,jj)  = nan;
     end
-    try longitude_grid(1,jj) = interp1(gps(1).time,gps(1).longitude,time_grid(1,jj));
+    try longitude_grid(1,jj) = interp1(gps(1).time_utc,gps(1).longitude,time_grid(1,jj));
     catch
         longitude_grid(1,jj) = nan;
     end

@@ -1,0 +1,97 @@
+clear all
+close all
+% -------------------------------------------------
+%% Analyze casts along navigation channel
+% -------------------------------------------------
+%% 0) list of input L0 files: ADCP (pressure) & CTD
+rootDIR ='~/OneDriveUNCW/DATA/CB_YachtBasin/'
+CTDFfiles= {fullfile(rootDIR,'JuneJamboree','PROCESSED_DATA','CTD','230442_CTDF_L0.mat');...
+            fullfile(rootDIR,'SummerFlood' ,'PROCESSED_DATA','CTD','230442_CTDF_L0.mat');...
+            fullfile(rootDIR,'FallFlood' ,'PROCESSED_DATA','RBR','230442_20260930_CTDF_L0.mat');...
+            fullfile(rootDIR,'FallFlood' ,'PROCESSED_DATA','RBR','230442_20261028_CTDF_L0.mat');...
+            fullfile(rootDIR,'FallFlood' ,'PROCESSED_DATA','RBR','230442_20261104_CTDF_L0.mat')};
+ADCPfiles= {fullfile(rootDIR,'JuneJamboree','PROCESSED_DATA_v2','ADCP','JuneJamboree_NorthADCP_adcp_level_1.mat');...
+            fullfile(rootDIR,'SummerFlood','PROCESSED_DATA_v2','ADCP','SummerFlood_NorthADCP_adcp_level_1.mat');...
+            fullfile(rootDIR,'FallFlood','PROCESSED_DATA_v2','ADCP','FallFlood_NorthADCP_adcp_level_1.mat');...            
+            fullfile(rootDIR,'FallFlood','PROCESSED_DATA_v2','ADCP','FallFlood_NorthADCP_adcp_level_1.mat');...
+            fullfile(rootDIR,'FallFlood','PROCESSED_DATA_v2','ADCP','FallFlood_NorthADCP_adcp_level_1.mat')};
+% 
+% ---------------------------------
+%% 1) define ROI for casts:
+% ---------------------------------
+[perim,Lat0,Lon0,LatInterp,LonInterp,East0,North0,EastInterp,NorthInterp,distInterp] = define_ROI_for_casts(CTDFfiles);
+%
+% 1.1) pre-allocate regular along-channel and depth grid
+dInterp = [0.1:0.1:6]';
+[xx0,dd0] = meshgrid(distInterp,dInterp);
+%
+%
+% ---------------------------------
+%% 2) load indivual dates and
+%     interpolate to 
+% ---------------------------------
+% for ii=1:length(CTDFfiles)
+    ii=3;
+    CTDFfile = CTDFfiles{ii};
+    ADCPfile = ADCPfiles{ii};
+    %
+    % 2.0) load CTDF
+    CTD = load(CTDFfile);
+    
+    % 2.1) get the time/pressure grid for ADCP
+    %
+    % 2.2) get casts in ROI
+    inROI = inpolygon(CTD.Latitude,CTD.Longitude,perim(:,1),perim(:,2));    
+    %
+    figure, geoplot(perim(:,1),perim(:,2))
+    hold on,geoplot(LatInterp, LonInterp,'-m')
+    hold on,geoplot(CTD.Latitude, CTD.Longitude,'*r')
+    hold on,geoplot(CTD.Latitude(inROI), CTD.Longitude(inROI),'*g')
+    %
+    % 2.3) map to nearest point on alongchannel curve (LatInterp,LonInterp)
+    [Pnear, distNear, iseg, tNear, ivert] = nearest_point_on_curve([CTD.Latitude(inROI)' CTD.Longitude(inROI)'], [LatInterp, LonInterp]);
+    %
+    dumLat = [Pnear(:,1)'; CTD.Latitude(inROI); nan*iseg'];
+    dumLon = [Pnear(:,2)'; CTD.Longitude(inROI); nan*iseg'];
+% $$$     dumLat = [LatInterp(ivert)'; CTD.Latitude(inROI); nan*iseg'];
+% $$$     dumLon = [LonInterp(ivert)'; CTD.Longitude(inROI); nan*iseg'];
+    hold on,geoplot(dumLat(:), dumLon(:) ,'-g')    
+
+    % 2.4) interpolate to grid
+    % define projection:
+    proj = projcrs(32119);
+    % Convert to ENU:
+    [East,North] = projfwd(proj,Pnear(:,1),Pnear(:,2));
+    dist = sqrt( (East-East0).^2 + (North-North0).^2);
+    %
+    % create grids
+    [xx,dd] = meshgrid(dist,CTD.Pressure);
+    %
+    % 2) need to segment the data to individual transects...
+    Time        = CTD.Time(:,inROI);
+    Temperautre = CTD.Temperature(:,inROI);
+    Salinity    = CTD.Salinity(:,inROI);    
+    Density     = CTD.Density(:,inROI);
+    %
+    ivalid = ~isnan(Density);
+    %
+    F = scatteredInterpolant(xx(ivalid),dd(ivalid),Density(ivalid));
+    DensityInterp = F(xx,dd);
+% __________
+%% 3) Plot individual casts:
+%
+% 3.1) Temperature (y,z)
+%
+% 3.2) Salinity (y,z)
+%
+% 3.3) Density (y,z)
+%
+% 3.4) NTU (y,z)
+%
+% 3.5) CDOM (y,z)
+%
+% 3.7) Chl-a (y,z)
+%
+% $$$ end;
+% ---------
+%% 4) Plot compendium by tidal phase:

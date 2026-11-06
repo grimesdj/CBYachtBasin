@@ -28,24 +28,30 @@ rng(1);                        % reproducible random realization
 % Hermitian symmetry is imposed so that ifft(X) is real.
 
 X = zeros(N,1);
+Y = zeros(N,1);
 
 % Positive frequencies excluding DC and Nyquist
 kpos = 2:N/2;
 
 % Random phases
-phi = 2*pi*rand(length(kpos),1);
+phi  = 2*pi*rand(length(kpos),1);
+phi2 = 2*pi*rand(length(kpos),1);
 
 % Unit-amplitude white spectrum
 X(kpos) = exp(1i*phi);
+Y(kpos) = exp(1i*phi2);
 
 % Hermitian-symmetric negative frequencies
 X(N-kpos+2) = conj(X(kpos));
+Y(N-kpos+2) = conj(Y(kpos));
 
 % Zero DC -> zero mean
 X(1) = 0;
+Y(1) = 0;
 
 % Set Nyquist component to zero for convenience
 X(N/2+1) = 0;
+Y(N/2+1) = 0;
 
 
 %% ------------------------------------------------------------
@@ -53,12 +59,15 @@ X(N/2+1) = 0;
 % -------------------------------------------------------------
 
 u = real(ifft(X));
+v = real(ifft(Y));
 
 % Remove any numerical residual mean
 u = u - mean(u);
+v = v - mean(v);
 
 % Normalize to exactly sigma_u = 3 cm/s
 u = sigma_u * u/rms(u);
+v = sigma_u * v/rms(v);
 
 
 %% Check statistics
@@ -81,13 +90,18 @@ dt = 1;
 fs = 1/dt;
 
 U = fft(u);
+V = fft(v);
 
 % Two-sided PSD
 Suu2 = (abs(U).^2)/(fs*N);
+Svv2 = (abs(V).^2)/(fs*N);
 
 % One-sided PSD
 Suu = Suu2(1:N/2+1);
 Suu(2:end-1) = 2*Suu(2:end-1);
+
+Svv = Svv2(1:N/2+1);
+Svv(2:end-1) = 2*Svv(2:end-1);
 
 f = (0:N/2)'*fs/N;
 
@@ -104,7 +118,7 @@ for ii = 1:length(win)
     nw = win(ii);
 
     % Centered moving average
-    us = movmean(u,nw);
+    us = movmean(u + v,nw);
 
     % Statistics of smoothed record
     AVG(ii) = mean(us);
@@ -116,7 +130,7 @@ end
 %% ------------------------------------------------------------
 % Theoretical RMS for averaging independent white-noise samples
 % -------------------------------------------------------------
-RMS_theory = sigma_u ./ sqrt(win);
+RMS_theory = (sigma_u+sigma_u) ./ sqrt(win);
 
 
 %% ------------------------------------------------------------
@@ -131,8 +145,8 @@ disp(T)
 % 5. Plot example white-noise record
 % -------------------------------------------------------------
 figure
-nplot = 1:500;
-plot(nplot,u(nplot),'k-')
+nplot = 1:150;
+plot(nplot,u(nplot),'k-',nplot,v(nplot),'r-')
 
 xlabel('Sample')
 ylabel('u (cm s$^{-1}$)')
@@ -144,7 +158,7 @@ grid on
 % 6. Plot power spectrum
 % -------------------------------------------------------------
 figure
-loglog(f(2:end),Suu(2:end),'k-')
+loglog(f(2:end),Suu(2:end),'k-',f(2:end),Svv(2:end),'r-')
 
 xlabel('Frequency (cycles/sample)')
 ylabel('PSD [(cm s$^{-1}$)$^2$/(cycles/sample)]')
